@@ -1,0 +1,11 @@
+[run]
+source=
+    watsor/
+omit=
+    venv/
+    watsor/main*.py
+    watsor/engine.py
+    watsor/zones.py
+
+concurrency=
+    multiprocessing

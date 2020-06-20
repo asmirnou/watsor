@@ -1,0 +1,146 @@
+# Optional HTTP server configuration and authentication.
+# http:
+  # port: 8080
+  # username: !env_var "USERNAME john"
+  # password: !env_var "PASSWORD qwerty"
+
+
+# Optional MQTT client configuration and authentication.
+#mqtt:
+  # host: localhost
+  # port: 1883
+  # username: !secret mqtt_username
+  # password: !secret mqtt_password
+
+
+# Default FFmpeg arguments for decoding video stream before detection and encoding back afterwards.
+# Optional, can be overwritten per camera.
+ffmpeg:
+  decoder:
+    - -hide_banner
+    - -loglevel
+    -  error
+    - -nostdin
+    - -hwaccel
+    -  vaapi
+    - -hwaccel_device
+    -  /dev/dri/renderD128
+    - -hwaccel_output_format
+    -  yuv420p
+    - -fflags
+    -  nobuffer
+    - -flags
+    -  low_delay
+    - -fflags
+    -  +genpts+discardcorrupt
+    - -i                          # camera input field will follow '-i' ffmpeg argument automatically
+    - -f
+    -  rawvideo
+    - -pix_fmt
+    -  rgb24
+  encoder:                        # Encoder is optional, remove the entire list to disable.
+    - -hide_banner
+    - -loglevel
+    -  error
+    - -hwaccel
+    -  vaapi
+    - -hwaccel_device
+    -  /dev/dri/renderD128
+    - -hwaccel_output_format
+    -  yuv420p
+    - -f
+    -  rawvideo
+    - -pix_fmt
+    -  rgb24
+    - -i                          # detection output stream will follow '-i' ffmpeg argument automatically
+    - -an
+    - -f
+    -  mpegts
+    - -vcodec
+    -  libx264
+    - -pix_fmt
+    -  yuv420p
+    - -vf
+    - "drawtext='text=%{localtime\\:%c}': x=w-tw-lh: y=h-2*lh: fontcolor=white: box=1: boxcolor=black@0.55"
+
+
+# Detect the following labels of the object detection model.
+# Optional, can be overwritten per camera.
+detect:
+  - person:
+      area: 20                    # Minimum area of the bounding box an object should have in
+                                  # order to be detected. Defaults to 10% of entire video resolution.
+      confidence: 60              # Confidence threshold that a detection is what it's guessed to be,
+                                  # otherwise it's ruled out. 50% if not set.
+  - car:
+      zones: [1, 3, 5]            # Limit the zones on mask image, where detection is allowed.
+                                  # If not set or empty, all zones are allowed.
+                                  # Run `zones.py -m mask.png` to figure out a zone number.
+  - truck:
+
+
+# List of cameras and their configurations.
+cameras:
+  - porch:                        # Camera name
+      width: 640                  #
+      height: 480                 # Video feed resolution in pixels
+
+      input: !ENV "rtsp://${RTSP_USERNAME}:${RTSP_PASSWORD}@192.168.0.10:554/cam/realmonitor?channel=1&subtype=2"
+
+      mask: porch.png             # Optional mask. Must be the same size as your video feed.
+
+      detect:                     # The values below override
+        - person:                 # detection defaults for just
+        - car:                    # this camera
+
+  - backyard:                     # Camera name
+      width: 640                  #
+      height: 480                 # Video feed resolution in pixels
+
+      input: !ENV "rtsp://${RTSP_USERNAME}:${RTSP_PASSWORD}@192.168.0.20:554/cam/realmonitor?channel=1&subtype=2"
+      output: !ENV "${HOME}/Videos/backyard.mp4"
+
+      ffmpeg:                     # These values override FFmpeg defaults
+        decoder:                  # for just # this camera
+          - -hide_banner
+          - -loglevel
+          -  error
+          - -nostdin
+          - -hwaccel
+          -  vaapi
+          - -hwaccel_device
+          -  /dev/dri/renderD128
+          - -hwaccel_output_format
+          -  yuv420p
+          - -i                    # camera input field will follow '-i' ffmpeg argument automatically
+          - -filter:v
+          -  fps=fps=15
+          - -f
+          -  rawvideo
+          - -pix_fmt
+          -  rgb24
+        encoder:
+          - -hide_banner
+          - -loglevel
+          -  error
+          - -hwaccel
+          -  vaapi
+          - -hwaccel_device
+          -  /dev/dri/renderD128
+          - -hwaccel_output_format
+          -  yuv420p
+          - -f
+          -  rawvideo
+          - -pix_fmt
+          -  rgb24
+          - -i                    # detection output stream will follow '-i' ffmpeg argument automatically
+          - -an
+          - -f
+          -  mp4
+          - -vcodec
+          -  libx264
+          - -pix_fmt
+          -  yuv420p
+          - -vf
+          - "drawtext='text=%{localtime\\:%c}': x=w-tw-lh: y=h-2*lh: fontcolor=white: box=1: boxcolor=black@0.55"
+          - -y

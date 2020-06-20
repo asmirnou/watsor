@@ -1,0 +1,17 @@
+version: '3'
+
+services:
+  watsor:
+    container_name: watsor
+    image: smirnou/watsor:latest
+    environment:
+      - LOG_LEVEL=info
+    volumes:
+      - /etc/localtime:/etc/localtime:ro
+      - ../config:/etc/watsor:ro
+    devices:
+      - /dev/bus/usb:/dev/bus/usb
+      - /dev/dri:/dev/dri
+    ports:
+      - 8080:8080
+    shm_size: 512m
