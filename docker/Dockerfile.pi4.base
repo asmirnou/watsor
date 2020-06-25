@@ -1,0 +1,135 @@
+FROM balenalib/raspberrypi4-64-ubuntu:bionic AS base
+
+RUN [ "cross-build-start" ]
+
+ENV DEBIAN_FRONTEND=noninteractive
+ENV TF_CPP_MIN_LOG_LEVEL=2
+
+# Install basic packages
+RUN install_packages \
+    apt-transport-https \
+    ca-certificates \
+    software-properties-common \
+    build-essential \
+    wget \
+    gnupg \
+    unzip
+
+# Install FFmpeg and some prerequisites
+RUN install_packages \
+    ffmpeg \
+    zlib1g-dev \
+    libpng-dev libjpeg-dev \
+    libgeos-dev \
+    libswscale-dev \
+    libtbb2 libtbb-dev \
+    libopenblas-dev libatlas-base-dev libblas-dev \
+    liblapack-dev \
+    libprotobuf-dev
+
+# Install Python and dependencies
+RUN install_packages \
+    python3-dev \
+    python3-pip \
+    python3-scipy && \
+    python3 -m pip install --upgrade \
+        pip \
+        setuptools \
+        wheel && \
+    python3 -m pip install --upgrade \
+        PyYaml \
+        Pillow \
+        cerberus \
+        numpy \
+        shapely \
+        werkzeug \
+        paho-mqtt \
+        https://dl.google.com/coral/python/tflite_runtime-2.1.0.post1-cp36-cp36m-linux_aarch64.whl
+
+# Build OpenCV from sources
+ENV OPENCV_VERSION="4.1.1"
+
+RUN install_packages \
+    cmake \
+    gfortran \
+    gcc-arm* \
+    protobuf-compiler \
+    pkg-config && \
+    wget -q https://github.com/opencv/opencv/archive/${OPENCV_VERSION}.zip && \
+    unzip ${OPENCV_VERSION}.zip -d /opt && \
+    rm /${OPENCV_VERSION}.zip  && \
+    mv /opt/opencv-${OPENCV_VERSION} /opt/opencv && \
+    mkdir /opt/opencv/cmake_binary && \
+    cd /opt/opencv/cmake_binary && \
+    cmake \
+      -D ENABLE_NEON=OFF \
+      -D ENABLE_VFPV3=OFF \
+      -D WITH_OPENMP=ON \
+      -D WITH_TBB=ON -D BUILD_TBB=ON \
+      -D WITH_JPEG=ON -D BUILD_JPEG=ON \
+      -D WITH_PNG=ON -D BUILD_PNG=ON \
+      -D WITH_TIFF=OFF -D BUILD_TIFF=OFF \
+      -D WITH_OPENEXR=OFF \
+      -D WITH_IPP=OFF \
+      -D WITH_WEBP=OFF \
+      -D WITH_FFMPEG=OFF \
+      -D WITH_1394=OFF \
+      -D WITH_GTK=OFF \
+      -D WITH_OPENCL=OFF \
+      -D WITH_QT=OFF \
+      -D WITH_V4L=OFF \
+      -D WITH_JASPER=OFF \
+      -D BUILD_TESTS=OFF \
+      -D BUILD_PERF_TESTS=OFF \
+      -D BUILD_EXAMPLES=OFF \
+      -D BUILD_SHARED_LIBS=ON \
+      -D CMAKE_BUILD_TYPE=RELEASE \
+      -D OPENCV_EXTRA_EXE_LINKER_FLAGS=-latomic \
+      -D OPENCV_ENABLE_NONFREE=ON \
+      -D INSTALL_C_EXAMPLES=OFF \
+      -D INSTALL_PYTHON_EXAMPLES=OFF \
+      -D BUILD_NEW_PYTHON_SUPPORT=ON \
+      -D BUILD_opencv_python2=OFF \
+      -D BUILD_opencv_python3=ON \
+      -D BUILD_opencv_java=OFF \
+      -D OPENCV_GENERATE_PKGCONFIG=ON \
+      .. && \
+    make -j"$(nproc)" install && \
+    ldconfig && \
+    rm -r /opt/opencv && \
+    apt-get purge --autoremove -y \
+    cmake \
+    gfortran \
+    gcc-arm* \
+    protobuf-compiler \
+    pkg-config
+
+# Install the Edge TPU runtime
+RUN echo "deb https://packages.cloud.google.com/apt coral-edgetpu-stable main" > /etc/apt/sources.list.d/coral-edgetpu.list && \
+    wget -q -O - https://packages.cloud.google.com/apt/doc/apt-key.gpg | apt-key add - && \
+    install_packages \
+        libedgetpu1-std \
+        python3-edgetpu
+
+# Cleanup and dedicated user
+RUN rm -rf /var/lib/apt/lists/* && \
+    apt-get autoremove -y && apt-get autoclean -y && \
+    mkdir /etc/watsor /usr/share/watsor /var/log/watsor && \
+    addgroup -gid 1001 watsor && \
+    adduser -uid 1001 -gid 1001 -gecos watsor -home /usr/share/watsor --no-create-home --disabled-password watsor && \
+    usermod -a --groups video,plugdev watsor && \
+    chown -R watsor /etc/watsor /usr/share/watsor /var/log/watsor
+
+# Download object detection models
+RUN mkdir model && \
+    wget -q https://github.com/google-coral/edgetpu/raw/master/test_data/ssd_mobilenet_v2_coco_quant_postprocess_edgetpu.tflite -O model/edgetpu.tflite --trust-server-names && \
+    wget -q https://storage.googleapis.com/download.tensorflow.org/models/tflite/coco_ssd_mobilenet_v1_1.0_quant_2018_06_29.zip -O model/cpu.zip && \
+    unzip model/cpu.zip detect.tflite -d model && \
+    mv model/detect.tflite model/cpu.tflite && \
+    rm model/cpu.zip && \
+    mv model /usr/share/watsor/model && \
+    chown -R watsor:watsor /usr/share/watsor/model
+
+EXPOSE 8080
+
+RUN [ "cross-build-end" ]

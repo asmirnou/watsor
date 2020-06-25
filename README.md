@@ -2,6 +2,28 @@
 
 Watsor detects objects in video stream using deep learning-based approach. Intended primarily for surveillance it works in sheer real-time analysing the most recent frame to deliver fastest reaction against a detected threat.
 
+## Table of contents
+  * [What it does](#what-it-does)
+  * [Getting started](#getting-started)
+  * [Configuration](#configuration)
+    + [Cameras](#cameras)
+    + [FFmpeg decoder and encoder](#ffmpeg-decoder-and-encoder)
+    + [Detection classes and filters](#detection-classes-and-filters)
+    + [Zones and masks](#zones-and-masks)
+    + [Tips](#tips)
+    + [Environmental variables](#environmental-variables)
+    + [Secrets](#secrets)
+    + [HomeAssistant integration](#homeassistant-integration)
+  * [Running Watsor](#running-watsor)
+    + [Docker](#docker)
+    + [Python module](#python-module)
+      - [Object detection models](#object-detection-models)
+      - [Hardware acceleration drivers](#hardware-acceleration-drivers)
+  * [Building from source](#building-from-source)
+  * [Troubleshooting](#troubleshooting)
+  * [Credits](#credits)
+  * [License](#license)
+
 ## What it does
 
 - Performs smart detection based on artificial neural networks significantly reducing false positives in video surveillance.
@@ -92,7 +114,7 @@ ffmpeg:
 ```
 </details>
 
-`ffmpeg.encoder` is optional and intended for the recording or broadcasting of video stream with rendered object detections. The recording is suitable for on demand streaming as the video is stored in a file such as `.m3u8` (HLS) or `.mp4` and can be re-watched. The broadcasting means the video is being recorded in real time and the viewer can only watch it as it is streaming. To broadcast the video with rendered object detections over HTTP set `-f mpegts` option in teh encoder and remove the camera's `output` key. The link to the video stream can be grabbed from Watsor's home page and opened in media player such as [VLC](https://en.wikipedia.org/wiki/VLC_media_player).  
+`ffmpeg.encoder` is optional and intended for the recording or broadcasting of video stream with rendered object detections. The recording is suitable for on demand streaming as the video is stored in a file such as `.m3u8` (HLS) or `.mp4` and can be re-watched. The broadcasting means the video is being recorded in real time and the viewer can only watch it as it is streaming. To broadcast the video with rendered object detections over HTTP set `-f mpegts` option in the encoder and remove the camera's `output` key. The link to the video stream can be grabbed from Watsor's home page and opened in media player such as [VLC](https://en.wikipedia.org/wiki/VLC_media_player).  
 
 When broadcasting live video stream in MPEG-TS be aware of noticeable [latency](https://trac.ffmpeg.org/wiki/StreamingGuide#Latency), which is unavoidable due to the nature of video encoding algorithm. Bear in mind the media player introduces a latency of its own as it buffers the feed. To watch the video with rendered object detections in sheer real-time with zero latency open Motion JPEG URL of the camera feed.
 
@@ -277,8 +299,10 @@ Watsor works well on Pyhton 3.6, 3.7, 3.8. Use a [virtual environment](https://d
 1. Install module:
 
    ```bash
-   python3 -m pip install watsor
+   python3 -m pip install[cpu] watsor
    ```
+   
+   If you've got a [hardware accelerator](#hardware-acceleration-drivers) or are installing the application on a tiny board like Raspberry Pi, take a look at _extra_ profiles `coral`, `cuda` or `lite` in [setup.py](setup.py). The dependencies listed in those profiles need to be installed in advance. Refer to the documentation of the device or take a look at one of the [Docker files](docker/) to understand how the dependencies are installed. 
 
 2. Create `model/` folder, download, unpack and prepare the [object detection models](#object-detection-models) (see the section below).
 
@@ -308,10 +332,11 @@ The models are available in several formats depending on the device the inferenc
 
 | Device | Filename | MobileNet v1 | MobileNet v2 | Inception v2 |
 |---|---|---|---|---|
-| CPU | `model/cpu.pb` | [MobileNet v1](http://download.tensorflow.org/models/object_detection/ssd_mobilenet_v1_coco_2018_01_28.tar.gz) | [MobileNet v2](http://download.tensorflow.org/models/object_detection/ssd_mobilenet_v2_coco_2018_03_29.tar.gz) | [Inception v2](http://download.tensorflow.org/models/object_detection/ssd_inception_v2_coco_2018_01_28.tar.gz) | 
 | Coral | `model/edgetpu.tflite` | [MobileNet v1](https://github.com/google-coral/edgetpu/raw/master/test_data/ssd_mobilenet_v1_coco_quant_postprocess_edgetpu.tflite) | [MobileNet v2](https://github.com/google-coral/edgetpu/raw/master/test_data/ssd_mobilenet_v2_coco_quant_postprocess_edgetpu.tflite) | N/A |
 | Nvidia CUDA GPU | `model/gpu.uff` | [MobileNet v1](https://github.com/dusty-nv/jetson-inference/releases/download/model-mirror-190618/SSD-Mobilenet-v1.tar.gz) | [MobileNet v2](https://github.com/dusty-nv/jetson-inference/releases/download/model-mirror-190618/SSD-Mobilenet-v2.tar.gz) | [Inception v2](https://github.com/dusty-nv/jetson-inference/releases/download/model-mirror-190618/SSD-Inception-v2.tar.gz) |
- 
+| CPU | `model/cpu.pb` | [MobileNet v1](http://download.tensorflow.org/models/object_detection/ssd_mobilenet_v1_coco_2018_01_28.tar.gz) | [MobileNet v2](http://download.tensorflow.org/models/object_detection/ssd_mobilenet_v2_coco_2018_03_29.tar.gz) | [Inception v2](http://download.tensorflow.org/models/object_detection/ssd_inception_v2_coco_2018_01_28.tar.gz) |
+| Raspberry Pi & others | `model/cpu.tflite` | [MobileNet v1](https://storage.googleapis.com/download.tensorflow.org/models/tflite/coco_ssd_mobilenet_v1_1.0_quant_2018_06_29.zip) | N/A | N/A | 
+  
 #### Hardware acceleration drivers
 
 Use of hardware accelerator is optional, but highly recommended as object detection as such requires much computation. Speaking of number of frames per second the CPU of a desktop computer can process just 24 FPS of the lightest model, but an accelerator can boost the performance up to 5 times. Two accelerators connected or installed can handle 200 FPS, which is more than enough for handling several video cameras.

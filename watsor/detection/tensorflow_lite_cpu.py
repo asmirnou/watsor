@@ -9,7 +9,7 @@ from watsor.stream.share import Detection
 
 
 class TensorFlowLiteObjectDetector:
-    """TensorFlow Lite inference on CPU is not used and was left just for the record.
+    """TensorFlow Lite inference on CPU is used on IoT devices.
     TensorFlow Lite running on desktop without any GPU delegate is 9 times worse than TensorFlow.
     """
 

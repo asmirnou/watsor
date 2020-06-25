@@ -1,0 +1,22 @@
+FROM watsor.pi4.base
+
+RUN [ "cross-build-start" ]
+
+COPY . /opt/watsor
+
+WORKDIR /opt/watsor
+
+RUN python3 -m pip install -r requirements.txt --no-deps && \
+    rm -r /opt/watsor
+
+RUN [ "cross-build-end" ]
+
+USER watsor
+
+WORKDIR /
+
+CMD python3 -m watsor.main \
+    --log-path /var/log/watsor \
+    --log-level ${LOG_LEVEL:-info} \
+    --config /etc/watsor/config.yaml \
+    --model-path /usr/share/watsor/model
