@@ -45,7 +45,7 @@ Regardless of how you run Watsor, you need to prepare configuration file, descri
 
 ## Configuration
 
-Watsor uses the [YAML](https://yaml.org/) syntax for configuration. The basics of YAML syntax are block collections and mappings containing key-value pairs. Each item in a collection starts with a `-` while mappings have the format `key: value`. Watsor performs config validation and, if you specify duplicate keys or missing values, prints the message at the start. 
+Watsor uses the [YAML](https://yaml.org/) syntax for configuration. The basics of YAML syntax are block collections and mappings containing key-value pairs. Each item in a collection starts with a `-` while mappings have the format `key: value`. Watsor performs config validation and, if you specified duplicate keys, missed some values or have wrong YAML syntax, prints the error message at the start. 
 
 Please find an example [configuration](config/config.yaml) file with explanatory comments that you can use as a template.
 
@@ -70,7 +70,7 @@ cameras:
 ```
 </details>
 
-A camera must specify `width`, `height` and `input` source of a video feed. Refer to the camera setting to figure out the proper values. The input source URL usually starts with `rtsp://` or `http://`, but can be anything FFmpeg can consume, a `.mp4` file for instance.
+A camera must specify `width`, `height` and `input` source of a video feed. Refer to the camera setting to figure out the proper values. `width` and `height` are supposed to reflect the resolution of the actual video feed. They don’t change the size of the video, but are used to configure the frame buffers and other things needed for Watsor to work. If `width` or `height` values do not match video feed, the image can’t be displayed correctly. The input source URL usually starts with `rtsp://` or `http://`, but can be anything FFmpeg can consume, a `.mp4` file for instance.
 
 Optional `mask` is a filename of a mask image used to limit detection zone. Refer to the [following](#zones-and-masks) section.
 
@@ -163,8 +163,16 @@ python3 -m watsor.zones -m config/porch.png
 ```
 
 ### Tips
-- In order to reduce CPU load change the frame rate of a video feed using FFmpeg [filter](https://trac.ffmpeg.org/wiki/ChangingFrameRate) as follows: `-filter:v fps=fps=10`
-- Unless you record video with rendered object detections choose smaller camera resolution as the images are being resized to the shape of the model 300x300 anyway
+- Not using [hardware accelerator](#hardware-acceleration-drivers) results in high CPU load. In order to reduce CPU load change the **frame rate** of an input video stream either in the setings of your camera or using FFmpeg [filter](https://trac.ffmpeg.org/wiki/ChangingFrameRate) as follows: 
+    ```
+    - -filter:v
+    -  fps=fps=10
+    ``` 
+    Ideally, the input frame rate of the cameras should not exceed the capabilities of the detectors, otherwise all available CPU units will be used for detection.
+
+- Unless you record video with rendered object detections choose **smaller resolution** in camera settings. 300x300 is the size of the images used to train the object detection model. During detection the framework automatically converts an input image to the size of the model to match the size of its tensors. As the resize happens anyway during the detection, feeding the stream of high resolution doesn’t make much sense unless the output stream the Watsor produces (the size of which matches the input resolution) is being recorded for later review (where the high resolution video is obviously desired).
+
+- Consider configuring **hardware acceleration** for decoding H.264 video (or whatever your camera produces) in FFmpeg. The command line options with `hwaccel` prefix are right for that. Refer to the following [wiki](https://trac.ffmpeg.org/wiki/HWAccelIntro) to learn what methods are available on your device.
 
 ### Environmental variables
  
@@ -221,17 +229,28 @@ List of MQTT topics:
 - `watsor/cameras/{camera}/sensor`
 - `watsor/cameras/{camera}/state`
 - `watsor/cameras/{camera}/detection/{class}/state`
+- `watsor/cameras/{camera}/detection/{class}/details`
 
 Subscribe to the topic `available` to receive availability (online/offline) updates about specific camera. The camera is `online` when Watsor starts and goes `offline` when the application stops.
 
 The camera can be controlled via topic `command` allowing to start/stop the decoder, limit frame rate and enable/disable the reporting of detection details.
 - When alarm control panel is armed, send `ON` to start the decoder and detection processes. When disarmed - send `OFF` to stop analysing the camera feed. The camera notifies about its running state through the `state` topic.
 - If nothing is detected for more than 30 seconds, you can slow down the camera by sending `FPS = 5` (or whatever rate you prefer) to limit frame rate in order to reduce the load on CPU or hardware accelerated detector. The camera will reset FPS limit itself and will reach full speed as soon as something's detected. 
-- The reporting on detection details including confidence, coordinates of the bounding box and zone index along with the timestamp of the frame can be turned on / off by sending `details = on` / `details = off` accordingly.
+- The reporting of detection details including confidence, coordinates of the bounding box and zone index along with the timestamp of the frame can be turned on / off by sending `details = on` / `details = off` accordingly. The details are published at another topic in JSON format as follows:
+    ```json
+    {
+        "t": "2020-06-27T17:41:21.681899",
+        "d": [{
+            "c": 73.7,
+            "b": [54, 244, 617, 479]
+        }]
+    }
+    ```
+    where `t` is timestamp of a frame, `d` - array of all detections of the given class of an object designated in topic path. Each detection has confidence `c` and bounding box `b` consisting of `x_min`, `y_min`, `x_max`, `y_max`. 
 
 The topic `sensor` is used to send the updates about camera current input and output speeds. Monitoring the speed is useful to trigger the alert, if camera is broken or disconnected suddenly.  
 
-The binary state (`ON` / `OFF`) of a detected object class is published at `/detection/{class}/state` topic, confirming the state every 10 seconds. This signals about a detected threat and is supposed to trigger the alarm.
+The binary state (`ON` / `OFF`) of a detected object class is published at `/detection/{class}/state` topic, confirming the state every 10 seconds. This signals about a detected threat and is supposed to trigger an alarm.
 
 ## Running Watsor
 
