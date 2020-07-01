@@ -163,16 +163,77 @@ python3 -m watsor.zones -m config/porch.png
 ```
 
 ### Tips
-- Not using [hardware accelerator](#hardware-acceleration-drivers) results in high CPU load. In order to reduce CPU load change the **frame rate** of an input video stream either in the setings of your camera or using FFmpeg [filter](https://trac.ffmpeg.org/wiki/ChangingFrameRate) as follows: 
-    ```
+- Not using [hardware accelerator](#hardware-acceleration-drivers) results in high CPU load. In order to reduce CPU load change the **frame rate** of an input video stream either in the setings of your camera or using FFmpeg [filter](https://trac.ffmpeg.org/wiki/ChangingFrameRate) as follows:
+
+    <details>
+    <summary>FPS filter</summary>
+     
+    ```yaml
     - -filter:v
     -  fps=fps=10
     ``` 
+    </details>
+    
     Ideally, the input frame rate of the cameras should not exceed the capabilities of the detectors, otherwise all available CPU units will be used for detection.
 
 - Unless you record video with rendered object detections choose **smaller resolution** in camera settings. 300x300 is the size of the images used to train the object detection model. During detection the framework automatically converts an input image to the size of the model to match the size of its tensors. As the resize happens anyway during the detection, feeding the stream of high resolution doesn’t make much sense unless the output stream the Watsor produces (the size of which matches the input resolution) is being recorded for later review (where the high resolution video is obviously desired).
+    
+    Sometimes camera doesn't provide much options to change resolution. Use FFmpeg [scale filter](https://trac.ffmpeg.org/wiki/Scaling) then:
+    
+    <details>
+    <summary>scale filter</summary>
+    
+    ```yaml
+    - -filter:v
+    -  scale=640:480
+    ```
+    </details>
+    
+    If you need to combine scale filter with FPS filter, separate them with [commas](https://trac.ffmpeg.org/wiki/FilteringGuide):
+    
+    <details>
+    <summary>two filters together</summary>
+    
+    ```yaml
+    - -filter:v
+    -  fps=fps=10,scale=640:480
+    ```
+    </details>
 
 - Consider configuring **hardware acceleration** for decoding H.264 video (or whatever your camera produces) in FFmpeg. The command line options with `hwaccel` prefix are right for that. Refer to the following [wiki](https://trac.ffmpeg.org/wiki/HWAccelIntro) to learn what methods are available on your device.
+
+- Playing the video in VLC (or other player) require constant rate of 25 frames / sec. Having many cameras or very few detectors processing all video sources sometimes can not provide such an output speed. Let's say you've got 2 cameras each producing 30 FPS and only one CPU-based detector capable to cope only with 25 FPS. The output speed of MPEG-TS video stream then will be only 12.5 FPS for each camera, resulting in jerks and pauses while viewing a video. To make a video fluent, the frame rate has to be changed, such that the output frame rate is higher than the input frame rate. 
+    
+    <details>
+    <summary>The following trick may be used (expand code snippet)</summary>
+    
+    ```yaml
+    encoder:
+      - -hide_banner
+      - -f
+      -  rawvideo
+      - -pix_fmt
+      -  rgb24
+      - -r
+      -  10
+      - -vsync
+      -  drop
+      - -i
+      - -an
+      - -f
+      -  mpegts
+      - -r
+      -  30000/1001
+      - -vsync
+      -  cfr
+      - -vcodec
+      -  libx264
+      - -pix_fmt
+      -  yuv420p
+    ```
+    </details>
+    
+    First the rate is lowered even more down to 10 FPS in order to guarantee constant feed for FFmpeg encoder (`-r 10`). The frames exceeding 10 FPS are dropped (`-vsync drop`) in order to match the target rate. Then output speed is set to be standard `30000/1001` (~30 FPS) and constant (`-vsync cfr`) to produce fluent video stream, duplicating frames as necessary to achieve the targeted output frame rate.
 
 ### Environmental variables
  
@@ -231,6 +292,8 @@ List of MQTT topics:
 - `watsor/cameras/{camera}/detection/{class}/state`
 - `watsor/cameras/{camera}/detection/{class}/details`
 
+The binary state (`ON` / `OFF`) of a detected object class is published at `/detection/{class}/state` topic, confirming the state every 10 seconds. This signals about a detected threat and is supposed to trigger an alarm.
+
 Subscribe to the topic `available` to receive availability (online/offline) updates about specific camera. The camera is `online` when Watsor starts and goes `offline` when the application stops.
 
 The camera can be controlled via topic `command` allowing to start/stop the decoder, limit frame rate and enable/disable the reporting of detection details.
@@ -248,9 +311,9 @@ The camera can be controlled via topic `command` allowing to start/stop the deco
     ```
     where `t` is timestamp of a frame, `d` - array of all detections of the given class of an object designated in topic path. Each detection has confidence `c` and bounding box `b` consisting of `x_min`, `y_min`, `x_max`, `y_max`. 
 
-The topic `sensor` is used to send the updates about camera current input and output speeds. Monitoring the speed is useful to trigger the alert, if camera is broken or disconnected suddenly.  
+The topic `sensor` is used to send the updates about camera current input and output speeds. Monitoring the speed is useful to trigger the alert, if camera is broken or disconnected suddenly.
 
-The binary state (`ON` / `OFF`) of a detected object class is published at `/detection/{class}/state` topic, confirming the state every 10 seconds. This signals about a detected threat and is supposed to trigger an alarm.
+The sensor values and detection details can be transmitted over MQTT very often up to tens times per second. The [recorder](https://www.home-assistant.io/integrations/recorder/) integration in HomeAssistant constantly saves data, storing everything by default from sensors to state changes. Fortunately, HomeAssistant allows to customize what needs to be written and not. A good idea is to include in recoder only those measurements that are really needed to avoid degradation of HomeAssistant's performance.
 
 ## Running Watsor
 
@@ -309,7 +372,15 @@ If your GPU supports Half precision (also known as FP16), you can boost performa
 
 Please note that native GPU support has not landed in docker-compose [yet](https://github.com/docker/compose/issues/6691).
 
-Models for CPU/GPU and EdgeTPU (Coral) are bundled in Docker images. You can use your own models, trained based on those listed in [object detection models](#object-detection-models) section, by mounting the volume at `/usr/share/watsor/model`.   
+Models for CPU/GPU and EdgeTPU (Coral) are bundled in Docker images. You can use your own models, trained based on those listed in [object detection models](#object-detection-models) section, by mounting the volume at `/usr/share/watsor/model`.
+
+The following table lists the available docker images:
+
+| Image | Suitable for |
+|---|---|
+| [watsor](https://hub.docker.com/r/smirnou/watsor) | x86-64 |
+| [watsor.gpu](https://hub.docker.com/r/smirnou/watsor.gpu) | x86-64 with Nvidia CUDA GPU  |
+| [watsor.pi4](https://hub.docker.com/r/smirnou/watsor.pi4) | Raspberry PI 4 with 64-bit OS |  
 
 ### Python module
 
