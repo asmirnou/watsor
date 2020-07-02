@@ -80,3 +80,22 @@ def cuda_gpus():
         # Otherwise, try to use any available device
         for device in range(ndevices):
             yield device, TensorRTObjectDetector
+
+
+def cpus():
+    """Yields either TensorFlow or TensorFlow Lite cpu-based detector class
+    depending on what dependency is installed.
+    """
+    try:
+        from watsor.detection.tensorflow_cpu import TensorFlowObjectDetector
+        yield TensorFlowObjectDetector
+        return
+    except ImportError:
+        pass
+
+    try:
+        from watsor.detection.tensorflow_lite_cpu import TensorFlowLiteObjectDetector
+        yield TensorFlowLiteObjectDetector
+        return
+    except ImportError:
+        pass

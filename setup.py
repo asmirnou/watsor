@@ -6,7 +6,7 @@ with open("README.md", "r", encoding="UTF-8") as fh:
 
 setup(
     name="watsor",
-    version="1.0.1",
+    version="1.0.3",
     author="Alexander Smirnov",
     author_email="aliaksandr.smirnou@gmail.com",
     description="Object detection for video surveillance",
@@ -32,7 +32,6 @@ setup(
         'shapely',
         'werkzeug',
         'paho-mqtt',
-        'tensorflow',  # 'tflite_runtime',
     ],
     extras_require={
         'coral': [
@@ -41,6 +40,12 @@ setup(
         'cuda': [
             'pycuda',
             'tensorrt',
+        ],
+        'cpu': [
+            'tensorflow',
+        ],
+        'lite': [
+            'tflite_runtime',
         ],
         'dev': [
             'coverage',

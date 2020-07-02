@@ -1,13 +1,13 @@
 # Optional HTTP server configuration and authentication.
-# http:
-  # port: 8080
+http:
+  port: 8080
   # username: !env_var "USERNAME john"
   # password: !env_var "PASSWORD qwerty"
 
 
 # Optional MQTT client configuration and authentication.
-#mqtt:
-  # host: localhost
+mqtt:
+  host: localhost
   # port: 1883
   # username: !secret mqtt_username
   # password: !secret mqtt_password
@@ -21,12 +21,12 @@ ffmpeg:
     - -loglevel
     -  error
     - -nostdin
-    - -hwaccel
-    -  vaapi
-    - -hwaccel_device
-    -  /dev/dri/renderD128
-    - -hwaccel_output_format
-    -  yuv420p
+    - -hwaccel                   # These options enable hardware acceleration of
+    -  vaapi                     # video de/encoding. You need to check what methods
+    - -hwaccel_device            # (if any) are supported by running the command:
+    -  /dev/dri/renderD128       #    ffmpeg -hwaccels
+    - -hwaccel_output_format     # Then refer to the documentation of the method
+    -  yuv420p                   # to enable it in ffmpeg. Remove if not sure.
     - -fflags
     -  nobuffer
     - -flags

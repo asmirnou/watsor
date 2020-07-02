@@ -3,8 +3,7 @@ from typing import Dict
 from multiprocessing.sharedctypes import Array
 from watsor.stream.work import Work, Payload
 from watsor.stream.share import FrameBuffer, FramesPerSecond, InferenceTime
-from watsor.detection.tensorflow_cpu import TensorFlowObjectDetector
-from watsor.detection.devices import cuda_gpus, edge_tpus
+from watsor.detection.devices import cuda_gpus, edge_tpus, cpus
 
 _ALWAYS_USE_CPU = False
 
@@ -31,23 +30,23 @@ def create_object_detectors(delegate_class, stop_event, log_queue, frame_queue, 
     def gen_name():
         return "detector{}".format(len(detectors) + 1)
 
-    for device, clazz in edge_tpus():
+    def append_detector(*args):
         detectors.append(ObjectDetector(delegate_class, gen_name(), stop_event, log_queue, frame_queue, frame_buffers,
                                         kwargs={**kwargs,
                                                 'detector_class': clazz,
-                                                'detector_args': (model_path, device)}))
+                                                'detector_args': (model_path, *args,)}))
+
+    for device, clazz in edge_tpus():
+        append_detector(device)
 
     for device, clazz in cuda_gpus():
-        detectors.append(ObjectDetector(delegate_class, gen_name(), stop_event, log_queue, frame_queue, frame_buffers,
-                                        kwargs={**kwargs,
-                                                'detector_class': clazz,
-                                                'detector_args': (model_path, device)}))
+        append_detector(device)
 
     if _ALWAYS_USE_CPU or len(detectors) == 0:
-        detectors.append(ObjectDetector(delegate_class, gen_name(), stop_event, log_queue, frame_queue, frame_buffers,
-                                        kwargs={**kwargs,
-                                                'detector_class': TensorFlowObjectDetector,
-                                                'detector_args': (model_path,)}))
+        for clazz in cpus():
+            append_detector()
+
+    assert len(detectors) > 0, "Failed to create an object detector. Make sure TensorFlow is installed."
 
     return detectors
 

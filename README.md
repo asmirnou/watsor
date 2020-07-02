@@ -2,6 +2,28 @@
 
 Watsor detects objects in video stream using deep learning-based approach. Intended primarily for surveillance it works in sheer real-time analysing the most recent frame to deliver fastest reaction against a detected threat.
 
+## Table of contents
+  * [What it does](#what-it-does)
+  * [Getting started](#getting-started)
+  * [Configuration](#configuration)
+    + [Cameras](#cameras)
+    + [FFmpeg decoder and encoder](#ffmpeg-decoder-and-encoder)
+    + [Detection classes and filters](#detection-classes-and-filters)
+    + [Zones and masks](#zones-and-masks)
+    + [Tips](#tips)
+    + [Environmental variables](#environmental-variables)
+    + [Secrets](#secrets)
+    + [HomeAssistant integration](#homeassistant-integration)
+  * [Running Watsor](#running-watsor)
+    + [Docker](#docker)
+    + [Python module](#python-module)
+      - [Object detection models](#object-detection-models)
+      - [Hardware acceleration drivers](#hardware-acceleration-drivers)
+  * [Building from source](#building-from-source)
+  * [Troubleshooting](#troubleshooting)
+  * [Credits](#credits)
+  * [License](#license)
+
 ## What it does
 
 - Performs smart detection based on artificial neural networks significantly reducing false positives in video surveillance.
@@ -23,7 +45,7 @@ Regardless of how you run Watsor, you need to prepare configuration file, descri
 
 ## Configuration
 
-Watsor uses the [YAML](https://yaml.org/) syntax for configuration. The basics of YAML syntax are block collections and mappings containing key-value pairs. Each item in a collection starts with a `-` while mappings have the format `key: value`. Watsor performs config validation and, if you specify duplicate keys or missing values, prints the message at the start. 
+Watsor uses the [YAML](https://yaml.org/) syntax for configuration. The basics of YAML syntax are block collections and mappings containing key-value pairs. Each item in a collection starts with a `-` while mappings have the format `key: value`. Watsor performs config validation and, if you specified duplicate keys, missed some values or have wrong YAML syntax, prints the error message at the start. 
 
 Please find an example [configuration](config/config.yaml) file with explanatory comments that you can use as a template.
 
@@ -48,7 +70,7 @@ cameras:
 ```
 </details>
 
-A camera must specify `width`, `height` and `input` source of a video feed. Refer to the camera setting to figure out the proper values. The input source URL usually starts with `rtsp://` or `http://`, but can be anything FFmpeg can consume, a `.mp4` file for instance.
+A camera must specify `width`, `height` and `input` source of a video feed. Refer to the camera setting to figure out the proper values. `width` and `height` are supposed to reflect the resolution of the actual video feed. They don’t change the size of the video, but are used to configure the frame buffers and other things needed for Watsor to work. If `width` or `height` values do not match video feed, the image can’t be displayed correctly. The input source URL usually starts with `rtsp://` or `http://`, but can be anything FFmpeg can consume, a `.mp4` file for instance.
 
 Optional `mask` is a filename of a mask image used to limit detection zone. Refer to the [following](#zones-and-masks) section.
 
@@ -92,7 +114,7 @@ ffmpeg:
 ```
 </details>
 
-`ffmpeg.encoder` is optional and intended for the recording or broadcasting of video stream with rendered object detections. The recording is suitable for on demand streaming as the video is stored in a file such as `.m3u8` (HLS) or `.mp4` and can be re-watched. The broadcasting means the video is being recorded in real time and the viewer can only watch it as it is streaming. To broadcast the video with rendered object detections over HTTP set `-f mpegts` option in teh encoder and remove the camera's `output` key. The link to the video stream can be grabbed from Watsor's home page and opened in media player such as [VLC](https://en.wikipedia.org/wiki/VLC_media_player).  
+`ffmpeg.encoder` is optional and intended for the recording or broadcasting of video stream with rendered object detections. The recording is suitable for on demand streaming as the video is stored in a file such as `.m3u8` (HLS) or `.mp4` and can be re-watched. The broadcasting means the video is being recorded in real time and the viewer can only watch it as it is streaming. To broadcast the video with rendered object detections over HTTP set `-f mpegts` option in the encoder and remove the camera's `output` key. The link to the video stream can be grabbed from Watsor's home page and opened in media player such as [VLC](https://en.wikipedia.org/wiki/VLC_media_player).  
 
 When broadcasting live video stream in MPEG-TS be aware of noticeable [latency](https://trac.ffmpeg.org/wiki/StreamingGuide#Latency), which is unavoidable due to the nature of video encoding algorithm. Bear in mind the media player introduces a latency of its own as it buffers the feed. To watch the video with rendered object detections in sheer real-time with zero latency open Motion JPEG URL of the camera feed.
 
@@ -141,8 +163,77 @@ python3 -m watsor.zones -m config/porch.png
 ```
 
 ### Tips
-- In order to reduce CPU load change the frame rate of a video feed using FFmpeg [filter](https://trac.ffmpeg.org/wiki/ChangingFrameRate) as follows: `-filter:v fps=fps=10`
-- Unless you record video with rendered object detections choose smaller camera resolution as the images are being resized to the shape of the model 300x300 anyway
+- Not using [hardware accelerator](#hardware-acceleration-drivers) results in high CPU load. In order to reduce CPU load change the **frame rate** of an input video stream either in the setings of your camera or using FFmpeg [filter](https://trac.ffmpeg.org/wiki/ChangingFrameRate) as follows:
+
+    <details>
+    <summary>FPS filter</summary>
+     
+    ```yaml
+    - -filter:v
+    -  fps=fps=10
+    ``` 
+    </details>
+    
+    Ideally, the input frame rate of the cameras should not exceed the capabilities of the detectors, otherwise all available CPU units will be used for detection.
+
+- Unless you record video with rendered object detections choose **smaller resolution** in camera settings. 300x300 is the size of the images used to train the object detection model. During detection the framework automatically converts an input image to the size of the model to match the size of its tensors. As the resize happens anyway during the detection, feeding the stream of high resolution doesn’t make much sense unless the output stream the Watsor produces (the size of which matches the input resolution) is being recorded for later review (where the high resolution video is obviously desired).
+    
+    Sometimes camera doesn't provide much options to change resolution. Use FFmpeg [scale filter](https://trac.ffmpeg.org/wiki/Scaling) then:
+    
+    <details>
+    <summary>scale filter</summary>
+    
+    ```yaml
+    - -filter:v
+    -  scale=640:480
+    ```
+    </details>
+    
+    If you need to combine scale filter with FPS filter, separate them with [commas](https://trac.ffmpeg.org/wiki/FilteringGuide):
+    
+    <details>
+    <summary>two filters together</summary>
+    
+    ```yaml
+    - -filter:v
+    -  fps=fps=10,scale=640:480
+    ```
+    </details>
+
+- Consider configuring **hardware acceleration** for decoding H.264 video (or whatever your camera produces) in FFmpeg. The command line options with `hwaccel` prefix are right for that. Refer to the following [wiki](https://trac.ffmpeg.org/wiki/HWAccelIntro) to learn what methods are available on your device.
+
+- Playing the video in VLC (or other player) require constant rate of 25 frames / sec. Having many cameras or very few detectors processing all video sources sometimes can not provide such an output speed. Let's say you've got 2 cameras each producing 30 FPS and only one CPU-based detector capable to cope only with 25 FPS. The output speed of MPEG-TS video stream then will be only 12.5 FPS for each camera, resulting in jerks and pauses while viewing a video. To make a video fluent, the frame rate has to be changed, such that the output frame rate is higher than the input frame rate. 
+    
+    <details>
+    <summary>The following trick may be used (expand code snippet)</summary>
+    
+    ```yaml
+    encoder:
+      - -hide_banner
+      - -f
+      -  rawvideo
+      - -pix_fmt
+      -  rgb24
+      - -r
+      -  10
+      - -vsync
+      -  drop
+      - -i
+      - -an
+      - -f
+      -  mpegts
+      - -r
+      -  30000/1001
+      - -vsync
+      -  cfr
+      - -vcodec
+      -  libx264
+      - -pix_fmt
+      -  yuv420p
+    ```
+    </details>
+    
+    First the rate is lowered even more down to 10 FPS in order to guarantee constant feed for FFmpeg encoder (`-r 10`). The frames exceeding 10 FPS are dropped (`-vsync drop`) in order to match the target rate. Then output speed is set to be standard `30000/1001` (~30 FPS) and constant (`-vsync cfr`) to produce fluent video stream, duplicating frames as necessary to achieve the targeted output frame rate.
 
 ### Environmental variables
  
@@ -199,17 +290,30 @@ List of MQTT topics:
 - `watsor/cameras/{camera}/sensor`
 - `watsor/cameras/{camera}/state`
 - `watsor/cameras/{camera}/detection/{class}/state`
+- `watsor/cameras/{camera}/detection/{class}/details`
+
+The binary state (`ON` / `OFF`) of a detected object class is published at `/detection/{class}/state` topic, confirming the state every 10 seconds. This signals about a detected threat and is supposed to trigger an alarm.
 
 Subscribe to the topic `available` to receive availability (online/offline) updates about specific camera. The camera is `online` when Watsor starts and goes `offline` when the application stops.
 
 The camera can be controlled via topic `command` allowing to start/stop the decoder, limit frame rate and enable/disable the reporting of detection details.
 - When alarm control panel is armed, send `ON` to start the decoder and detection processes. When disarmed - send `OFF` to stop analysing the camera feed. The camera notifies about its running state through the `state` topic.
 - If nothing is detected for more than 30 seconds, you can slow down the camera by sending `FPS = 5` (or whatever rate you prefer) to limit frame rate in order to reduce the load on CPU or hardware accelerated detector. The camera will reset FPS limit itself and will reach full speed as soon as something's detected. 
-- The reporting on detection details including confidence, coordinates of the bounding box and zone index along with the timestamp of the frame can be turned on / off by sending `details = on` / `details = off` accordingly.
+- The reporting of detection details including confidence, coordinates of the bounding box and zone index along with the timestamp of the frame can be turned on / off by sending `details = on` / `details = off` accordingly. The details are published at another topic in JSON format as follows:
+    ```json
+    {
+        "t": "2020-06-27T17:41:21.681899",
+        "d": [{
+            "c": 73.7,
+            "b": [54, 244, 617, 479]
+        }]
+    }
+    ```
+    where `t` is timestamp of a frame, `d` - array of all detections of the given class of an object designated in topic path. Each detection has confidence `c` and bounding box `b` consisting of `x_min`, `y_min`, `x_max`, `y_max`. 
 
-The topic `sensor` is used to send the updates about camera current input and output speeds. Monitoring the speed is useful to trigger the alert, if camera is broken or disconnected suddenly.  
+The topic `sensor` is used to send the updates about camera current input and output speeds. Monitoring the speed is useful to trigger the alert, if camera is broken or disconnected suddenly.
 
-The binary state (`ON` / `OFF`) of a detected object class is published at `/detection/{class}/state` topic, confirming the state every 10 seconds. This signals about a detected threat and is supposed to trigger the alarm.
+The sensor values and detection details can be transmitted over MQTT very often up to tens times per second. The [recorder](https://www.home-assistant.io/integrations/recorder/) integration in HomeAssistant constantly saves data, storing everything by default from sensors to state changes. Fortunately, HomeAssistant allows to customize what needs to be written and not. A good idea is to include in recoder only those measurements that are really needed to avoid degradation of HomeAssistant's performance.
 
 ## Running Watsor
 
@@ -268,7 +372,15 @@ If your GPU supports Half precision (also known as FP16), you can boost performa
 
 Please note that native GPU support has not landed in docker-compose [yet](https://github.com/docker/compose/issues/6691).
 
-Models for CPU/GPU and EdgeTPU (Coral) are bundled in Docker images. You can use your own models, trained based on those listed in [object detection models](#object-detection-models) section, by mounting the volume at `/usr/share/watsor/model`.   
+Models for CPU/GPU and EdgeTPU (Coral) are bundled in Docker images. You can use your own models, trained based on those listed in [object detection models](#object-detection-models) section, by mounting the volume at `/usr/share/watsor/model`.
+
+The following table lists the available docker images:
+
+| Image | Suitable for |
+|---|---|
+| [watsor](https://hub.docker.com/r/smirnou/watsor) | x86-64 |
+| [watsor.gpu](https://hub.docker.com/r/smirnou/watsor.gpu) | x86-64 with Nvidia CUDA GPU  |
+| [watsor.pi4](https://hub.docker.com/r/smirnou/watsor.pi4) | Raspberry PI 4 with 64-bit OS |  
 
 ### Python module
 
@@ -277,8 +389,10 @@ Watsor works well on Pyhton 3.6, 3.7, 3.8. Use a [virtual environment](https://d
 1. Install module:
 
    ```bash
-   python3 -m pip install watsor
+   python3 -m pip install[cpu] watsor
    ```
+   
+   If you've got a [hardware accelerator](#hardware-acceleration-drivers) or are installing the application on a tiny board like Raspberry Pi, take a look at _extra_ profiles `coral`, `cuda` or `lite` in [setup.py](setup.py). The dependencies listed in those profiles need to be installed in advance. Refer to the documentation of the device or take a look at one of the [Docker files](docker/) to understand how the dependencies are installed. 
 
 2. Create `model/` folder, download, unpack and prepare the [object detection models](#object-detection-models) (see the section below).
 
@@ -308,10 +422,11 @@ The models are available in several formats depending on the device the inferenc
 
 | Device | Filename | MobileNet v1 | MobileNet v2 | Inception v2 |
 |---|---|---|---|---|
-| CPU | `model/cpu.pb` | [MobileNet v1](http://download.tensorflow.org/models/object_detection/ssd_mobilenet_v1_coco_2018_01_28.tar.gz) | [MobileNet v2](http://download.tensorflow.org/models/object_detection/ssd_mobilenet_v2_coco_2018_03_29.tar.gz) | [Inception v2](http://download.tensorflow.org/models/object_detection/ssd_inception_v2_coco_2018_01_28.tar.gz) | 
 | Coral | `model/edgetpu.tflite` | [MobileNet v1](https://github.com/google-coral/edgetpu/raw/master/test_data/ssd_mobilenet_v1_coco_quant_postprocess_edgetpu.tflite) | [MobileNet v2](https://github.com/google-coral/edgetpu/raw/master/test_data/ssd_mobilenet_v2_coco_quant_postprocess_edgetpu.tflite) | N/A |
 | Nvidia CUDA GPU | `model/gpu.uff` | [MobileNet v1](https://github.com/dusty-nv/jetson-inference/releases/download/model-mirror-190618/SSD-Mobilenet-v1.tar.gz) | [MobileNet v2](https://github.com/dusty-nv/jetson-inference/releases/download/model-mirror-190618/SSD-Mobilenet-v2.tar.gz) | [Inception v2](https://github.com/dusty-nv/jetson-inference/releases/download/model-mirror-190618/SSD-Inception-v2.tar.gz) |
- 
+| CPU | `model/cpu.pb` | [MobileNet v1](http://download.tensorflow.org/models/object_detection/ssd_mobilenet_v1_coco_2018_01_28.tar.gz) | [MobileNet v2](http://download.tensorflow.org/models/object_detection/ssd_mobilenet_v2_coco_2018_03_29.tar.gz) | [Inception v2](http://download.tensorflow.org/models/object_detection/ssd_inception_v2_coco_2018_01_28.tar.gz) |
+| Raspberry Pi & others | `model/cpu.tflite` | [MobileNet v1](https://storage.googleapis.com/download.tensorflow.org/models/tflite/coco_ssd_mobilenet_v1_1.0_quant_2018_06_29.zip) | N/A | N/A | 
+  
 #### Hardware acceleration drivers
 
 Use of hardware accelerator is optional, but highly recommended as object detection as such requires much computation. Speaking of number of frames per second the CPU of a desktop computer can process just 24 FPS of the lightest model, but an accelerator can boost the performance up to 5 times. Two accelerators connected or installed can handle 200 FPS, which is more than enough for handling several video cameras.
