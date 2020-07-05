@@ -90,7 +90,7 @@ if __name__ == '__main__':
         trt_engine_datatype=TRT_PRECISION_TO_DATATYPE[args.precision],
         batch_size=args.batch_size,
         model_width=args.model_width, model_height=args.model_height)
-
-    # Save the engine to file
-    save_engine(trt_engine, args.trt_engine_path)
-    print("TensorRT engine saved to {}".format(args.trt_engine_path))
+    if trt_engine is not None:
+        # Save the engine to file
+        save_engine(trt_engine, args.trt_engine_path)
+        print("TensorRT engine saved to {}".format(args.trt_engine_path))
