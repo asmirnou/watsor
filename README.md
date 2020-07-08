@@ -418,7 +418,11 @@ Open [http://localhost:8080](http://localhost:8080) to navigate to a simple home
 
 Watsor uses Single-Shot Detector (SSD) detector trained to recognize 90 classes of object. The detection model has several types providing the trade-off between accuracy and speed. For example, _MobileNet v1_ is the fastest, but less accurate than _Inception v2_.   
 
-The models are available in several formats depending on the device the inference is being performed on. If you've got [The Coral USB Accelerator](https://coral.ai/products/accelerator/) download one of the models built for Edge TPU (MobileNet v1/v2), rename the file and put in `model/` folder as `edgetpu.tflite`. Have [Nvidia CUDA GPU](https://developer.nvidia.com/cuda-gpus) on board - download one of three models, unpack the archive, rename the file and put in `model/` folder as `gpu.uff`.
+The models are available in several formats depending on the device the inference is being performed on.
+ - If you've got [The Coral USB Accelerator](https://coral.ai/products/accelerator/) download one of the models built for Edge TPU (MobileNet v1/v2), rename the file and put in `model/` folder as `edgetpu.tflite`. 
+ - Have [Nvidia CUDA GPU](https://developer.nvidia.com/cuda-gpus) on board - download one of two models (MobileNet / Inception), unpack the archive, rename the file and put in `model/` folder as `gpu.uff`.
+ - CPU is used only when there are no accelerators. Inside of TensorFlow archive you can find several files, you need only `frozen_inference_graph.pb` renamed as `cpu.pb` and put in `model/` folder.
+ - For single board computer such as Raspberry Pi or [Jetson Nano](https://github.com/asmirnou/watsor/wiki/Deploying-Watsor-to-Jetson-Nano) lightweight model is more suitable. Download and unpack the archive, rename the file and put in `model/` folder as `cpu.tflite`.
 
 | Device | Filename | MobileNet v1 | MobileNet v2 | Inception v2 |
 |---|---|---|---|---|
