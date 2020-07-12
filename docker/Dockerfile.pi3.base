@@ -1,0 +1,76 @@
+# The device types Debian Balena base images have the Raspbian package source added
+# and Raspbian userland pre-installed
+FROM balenalib/raspberrypi3-debian-python:3.7.7-buster
+
+RUN [ "cross-build-start" ]
+
+ENV DEBIAN_FRONTEND=noninteractive
+ENV TF_CPP_MIN_LOG_LEVEL=2
+
+# Install basic packages
+RUN install_packages \
+    apt-transport-https \
+    ca-certificates \
+    software-properties-common \
+    build-essential \
+    wget \
+    gnupg \
+    unzip
+
+# Install FFmpeg with hardware acceleration support and some prerequisites
+RUN install_packages \
+    ffmpeg \
+    zlib1g \
+    libpng-dev libjpeg-dev \
+    libgeos-dev \
+    libopenblas-dev libatlas-base-dev libblas-dev \
+    libilmbase23 libgtk-3-0 libatk1.0-0 libpango-1.0-0 libjasper1 libopenexr23 libswscale5 libpangocairo-1.0-0 libtiff5 libcairo2 libwebp6 libgdk-pixbuf2.0-0 libcairo-gobject2
+
+# Install Python dependencies
+RUN python3 -m pip install --upgrade \
+        pip \
+        setuptools \
+        wheel && \
+    python3 -m pip install --upgrade \
+        PyYaml \
+        cerberus \
+        werkzeug \
+        paho-mqtt && \
+    python3 -m pip install --upgrade --extra-index-url https://www.piwheels.org/simple \
+        numpy \
+        scipy \
+        opencv-python-headless==4.1.0.25 \
+        Pillow \
+        Shapely && \
+    python3 -m pip install \
+        https://dl.google.com/coral/python/tflite_runtime-2.1.0.post1-cp37-cp37m-linux_armv7l.whl
+
+# Install the Edge TPU runtime
+RUN echo "deb https://packages.cloud.google.com/apt coral-edgetpu-stable main" > /etc/apt/sources.list.d/coral-edgetpu.list && \
+    wget -q -O - https://packages.cloud.google.com/apt/doc/apt-key.gpg | apt-key add - && \
+    install_packages \
+        libedgetpu1-std \
+        python3-edgetpu
+
+# Cleanup and dedicated user
+RUN rm -rf /var/lib/apt/lists/* && \
+    apt-get autoremove -y && apt-get autoclean -y && \
+    mkdir /etc/watsor /usr/share/watsor /var/log/watsor && \
+    addgroup -gid 1001 watsor && \
+    adduser -uid 1001 -gid 1001 -gecos watsor -home /usr/share/watsor --no-create-home --disabled-password watsor && \
+    usermod -a --groups video,plugdev watsor && \
+    chown -R watsor /etc/watsor /usr/share/watsor /var/log/watsor
+
+# Download object detection models
+RUN mkdir model && \
+    wget -q https://github.com/google-coral/edgetpu/raw/master/test_data/ssd_mobilenet_v2_coco_quant_postprocess_edgetpu.tflite -O model/edgetpu.tflite --trust-server-names && \
+    wget -q https://storage.googleapis.com/download.tensorflow.org/models/tflite/coco_ssd_mobilenet_v1_1.0_quant_2018_06_29.zip -O model/cpu.zip && \
+    unzip model/cpu.zip detect.tflite -d model && \
+    mv model/detect.tflite model/cpu.tflite && \
+    rm model/cpu.zip && \
+    mv model /usr/share/watsor/model && \
+    chown -R watsor:watsor /usr/share/watsor/model
+
+EXPOSE 8080
+
+RUN [ "cross-build-end" ]

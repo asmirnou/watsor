@@ -380,6 +380,7 @@ The following table lists the available docker images:
 |---|---|
 | [watsor](https://hub.docker.com/r/smirnou/watsor) | x86-64 |
 | [watsor.gpu](https://hub.docker.com/r/smirnou/watsor.gpu) | x86-64 with Nvidia CUDA GPU  |
+| [watsor.pi3](https://hub.docker.com/r/smirnou/watsor.pi3) | Raspberry PI 3 or 4 with 32-bit OS |
 | [watsor.pi4](https://hub.docker.com/r/smirnou/watsor.pi4) | Raspberry PI 4 with 64-bit OS |  
 
 ### Python module
