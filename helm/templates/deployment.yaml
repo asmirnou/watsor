@@ -1,0 +1,109 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "watsor.fullname" . }}
+  labels:
+    {{- include "watsor.labels" . | nindent 4 }}
+spec:
+  replicas: {{ .Values.replicaCount }}
+  strategy:
+    type: {{ .Values.strategy }}
+  selector:
+    matchLabels:
+      {{- include "watsor.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+    {{- with .Values.podAnnotations }}
+      annotations:
+        {{- toYaml . | nindent 8 }}
+    {{- end }}
+      labels:
+        {{- include "watsor.selectorLabels" . | nindent 8 }}
+    spec:
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      serviceAccountName: {{ include "watsor.serviceAccountName" . }}
+      securityContext:
+        {{- toYaml .Values.podSecurityContext | nindent 8 }}
+      containers:
+        - name: {{ .Chart.Name }}
+          securityContext:
+            {{- toYaml .Values.securityContext | nindent 12 }}
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          {{- if .Values.extraEnv }}
+          env:
+{{ toYaml .Values.extraEnv | trim | indent 12 }}
+          {{- end }}
+          ports:
+            - name: http
+              containerPort: 8080
+              protocol: TCP
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: http
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: http
+          resources:
+            {{- toYaml .Values.resources | nindent 12 }}
+          volumeMounts:
+            - name: config
+              mountPath: "/etc/watsor/config.yaml"
+              subPath: "config.yaml"
+              readOnly: true
+            {{- if .Values.existingSecret }}
+            - name: secrets
+              mountPath: "/etc/watsor/secrets.yaml"
+              subPath: "secrets.yaml"
+              readOnly: true
+            {{- end }}
+            {{- if .Values.shmSize }}
+            - name: dshm
+              mountPath: /dev/shm
+            {{- end }}
+            {{- range $key, $value := .Values.hostPaths }}
+            - name: {{ $value.name }}
+              mountPath: {{ $value.path }}
+            {{- end }}
+      volumes:
+        - name: config
+          configMap:
+            defaultMode: 0440
+            name: {{ include "watsor.fullname" . }}
+        {{- if .Values.existingSecret }}
+        - name: secrets
+          secret:
+            secretName: {{ .Values.existingSecret }}
+            defaultMode: 0440
+            items:
+              - key: secrets.yaml
+                path: secrets.yaml
+        {{- end }}
+        {{- if .Values.shmSize }}
+        - name: dshm
+          emptyDir:
+            medium: Memory
+            sizeLimit: {{ .Values.shmSize }}
+        {{- end }}
+        {{- range $key, $value := .Values.hostPaths }}
+        - name: {{ $value.name }}
+          hostPath:
+            path: {{ $value.path }}
+        {{- end }}
+      {{- with .Values.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
