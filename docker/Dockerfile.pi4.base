@@ -104,6 +104,69 @@ RUN install_packages \
     protobuf-compiler \
     pkg-config
 
+# Build latest userland tools and FFmpeg with hardware acceleration support
+#RUN install_packages \
+#    libx264-dev \
+#    libx265-dev \
+#    cmake \
+#    git \
+#    gcc-arm* \
+#    g++-arm* \
+#    pkg-config && \
+#    cd / && \
+#    git clone --depth 1 https://github.com/raspberrypi/userland.git && \
+#    mkdir -p userland/build/arm-linux/release && \
+#    cd userland/build/arm-linux/release && \
+#    cmake \
+#        -DCMAKE_TOOLCHAIN_FILE="../../../makefiles/cmake/toolchains/aarch64-linux-gnu.cmake" \
+#        -DCMAKE_BUILD_TYPE="Release" \
+#        -DARM64="ON" \
+#        -DCMAKE_INSTALL_PREFIX="/opt/vc" \
+#        -DCMAKE_INSTALL_RPATH='${CMAKE_INSTALL_PREFIX}/lib' \
+#        ../../.. && \
+#    make -j"$(nproc)" install && \
+#    rm -rf userland && \
+#    cd / && \
+#    FFMPEG_VERSION=4.2.2 && \
+#    wget http://ffmpeg.org/releases/ffmpeg-${FFMPEG_VERSION}.tar.gz && \
+#    tar zxf ffmpeg-${FFMPEG_VERSION}.tar.gz && \
+#    rm ffmpeg-${FFMPEG_VERSION}.tar.gz && \
+#    cd ffmpeg-${FFMPEG_VERSION} && \
+#    ./configure \
+#        --arch="aarch64" \
+#        --target-os="linux" \
+#        --prefix="/usr/local" \
+#        --enable-cross-compile \
+#        --toolchain=hardened \
+#        --enable-gpl \
+#        --enable-nonfree \
+#        --enable-avresample \
+#        --enable-libx264 \
+#        --enable-libx265 \
+#        --enable-omx \
+#        --enable-omx-rpi \
+#        --enable-mmal \            https://github.com/raspberrypi/userland/issues/630
+#        --enable-neon \
+#        --enable-shared \
+#        --disable-static \
+#        --disable-debug \
+#        --disable-doc \
+#        --disable-ffplay \
+#        --extra-cflags="-I/usr/local/include \
+#                        -I/opt/vc/include \
+#                        -I/opt/vc/include/IL" \
+#        --extra-ldflags="-Wl,-rpath-link,/opt/vc/lib \
+#                         -Wl,-rpath,/opt/vc/lib" && \
+#    make -j"$(nproc)" install && \
+#    cd / && \
+#    rm -rf ffmpeg-${FFMPEG_VERSION} && \
+#    apt-get purge --autoremove -y \
+#    cmake \
+#    git \
+#    gcc-arm* \
+#    g++-arm* \
+#    pkg-config
+
 # Install the Edge TPU runtime
 RUN echo "deb https://packages.cloud.google.com/apt coral-edgetpu-stable main" > /etc/apt/sources.list.d/coral-edgetpu.list && \
     wget -q -O - https://packages.cloud.google.com/apt/doc/apt-key.gpg | apt-key add - && \

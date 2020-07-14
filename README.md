@@ -38,7 +38,7 @@ Being applicable in CCTV, Watsor also suits other areas, where object detection 
 
 ## Getting started
 
-Watsor is written on Python 3 and ships mainly as [Python module](#python-module). The easiest way, however, is trying it in [Docker](#docker) as far as hardware drivers and models are bundled in the images.
+Watsor is written in Python 3 and ships mainly as [Python module](#python-module). The easiest way, however, is trying it in [Docker](#docker) as far as hardware drivers and models are bundled in the images.
 
 Regardless of how you run Watsor, you need to prepare configuration file, describing the cameras you've got and few other options such as types of detections and zones. Refer to the guide below.
 
@@ -380,6 +380,7 @@ The following table lists the available docker images:
 |---|---|
 | [watsor](https://hub.docker.com/r/smirnou/watsor) | x86-64 |
 | [watsor.gpu](https://hub.docker.com/r/smirnou/watsor.gpu) | x86-64 with Nvidia CUDA GPU  |
+| [watsor.pi3](https://hub.docker.com/r/smirnou/watsor.pi3) | Raspberry PI 3 or 4 with 32-bit OS |
 | [watsor.pi4](https://hub.docker.com/r/smirnou/watsor.pi4) | Raspberry PI 4 with 64-bit OS |  
 
 ### Python module

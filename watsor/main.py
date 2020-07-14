@@ -137,7 +137,7 @@ class _HTTPApplication(_BasicApp):
                                   methods=["GET"], endpoint="stream_video_mpegts"))
         self._url_map = Map(rules)
 
-        self._server = make_server('', self._config['http']['port'], self._dispatch_request, threaded=True)
+        self._server = make_server('0.0.0.0', self._config['http']['port'], self._dispatch_request, threaded=True)
 
         log = getLogger('werkzeug')
         log.setLevel(self._args.log_level)
