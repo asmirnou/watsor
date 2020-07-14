@@ -55,7 +55,7 @@ ingress:
 # The size of the /dev/shm partition for the container. Specify as an integer value
 # representing the number of bytes or as a string expressing a byte value.
 #
-shmSize: 1Mi
+shmSize: 512Mi
 
 resources: {}
   # We usually recommend not to specify default resources and to leave this as a conscious
