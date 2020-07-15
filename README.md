@@ -391,7 +391,7 @@ To deploy Watsor on Kubernetes cluster use [Helm chart](https://asmirnou.github.
 ```bash
 helm repo add asmirnou https://asmirnou.github.io/watsor-helm-chart
 helm repo update
-helm install asmirnou/watsor
+helm install watsor asmirnou/watsor
 ```
 
 ### Python module
