@@ -1,10 +1,10 @@
 import threading
 import json
-from os import getpid, getcwd, path
+from os import getpid, getcwd, path, environ
 from platform import node
 from pathlib import Path
 from functools import partial
-from signal import signal, SIGINT
+from signal import signal, SIGINT, SIGTERM
 from subprocess import PIPE, DEVNULL
 from textwrap import dedent
 from logging import getLogger
@@ -66,14 +66,15 @@ class _BasicApp:
         parser.add_argument('--log-level',
                             dest='log_level', metavar='LOG_LEVEL',
                             type=str, choices=['debug', 'info', 'warning', 'error', 'fatal'],
-                            default='info', help='log level')
+                            default=environ.get('LOG_LEVEL', 'info'), help='log level')
 
         self._args = parser.parse_args()
         self._args.log_level = self._args.log_level.upper()
 
     def _install_signal_handler(self):
         self._stop_main_event = threading.Event()
-        signal(SIGINT, partial(lambda stop_event, *_args: stop_event.set(), self._stop_main_event))
+        for s in [SIGINT, SIGTERM]:
+            signal(s, partial(lambda stop_event, *_args: stop_event.set(), self._stop_main_event))
 
     def _init_logging(self):
         self._stop_logging_event = threading.Event()

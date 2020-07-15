@@ -16,6 +16,7 @@ Watsor detects objects in video stream using deep learning-based approach. Inten
     + [HomeAssistant integration](#homeassistant-integration)
   * [Running Watsor](#running-watsor)
     + [Docker](#docker)
+    + [Kubernetes](#kubernetes)
     + [Python module](#python-module)
       - [Object detection models](#object-detection-models)
       - [Hardware acceleration drivers](#hardware-acceleration-drivers)
@@ -381,7 +382,17 @@ The following table lists the available docker images:
 | [watsor](https://hub.docker.com/r/smirnou/watsor) | x86-64 |
 | [watsor.gpu](https://hub.docker.com/r/smirnou/watsor.gpu) | x86-64 with Nvidia CUDA GPU  |
 | [watsor.pi3](https://hub.docker.com/r/smirnou/watsor.pi3) | Raspberry PI 3 or 4 with 32-bit OS |
-| [watsor.pi4](https://hub.docker.com/r/smirnou/watsor.pi4) | Raspberry PI 4 with 64-bit OS |  
+| [watsor.pi4](https://hub.docker.com/r/smirnou/watsor.pi4) | Raspberry PI 4 with 64-bit OS |
+
+### Kubernetes
+
+To deploy Watsor on Kubernetes cluster use [Helm chart](https://asmirnou.github.io/watsor-helm-chart/):
+
+```bash
+helm repo add asmirnou https://asmirnou.github.io/watsor-helm-chart
+helm repo update
+helm install asmirnou/watsor
+```
 
 ### Python module
 

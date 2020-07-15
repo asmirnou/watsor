@@ -11,8 +11,7 @@ USER watsor
 
 WORKDIR /
 
-CMD python3 -m watsor.main \
-    --log-path /var/log/watsor \
-    --log-level ${LOG_LEVEL:-info} \
-    --config /etc/watsor/config.yaml \
-    --model-path /usr/share/watsor/model
+CMD ["python3", "-m", "watsor.main", \
+     "--log-path", "/var/log/watsor", \
+     "--config", "/etc/watsor/config.yaml", \
+     "--model-path", "/usr/share/watsor/model"]
