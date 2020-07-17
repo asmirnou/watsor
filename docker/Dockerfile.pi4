@@ -11,7 +11,9 @@ RUN python3 -m pip install -r requirements.txt --no-deps && \
 
 RUN [ "cross-build-end" ]
 
-USER watsor
+# Enable udevd in the container to get rid of "Error in device opening" for the Coral USB Accelerator.
+# The container also need to be run privileged, so we leave the default root user.
+ENV UDEV=1
 
 WORKDIR /
 
