@@ -37,7 +37,7 @@ image:
 	docker build --tag watsor.pi4.base --file docker/Dockerfile.pi4.base .
 	docker build --tag watsor          --file docker/Dockerfile          .
 	docker build --tag watsor.gpu      --file docker/Dockerfile.gpu      .
-	docker build --tag watsor.pi3      --file docker/Dockerfile.pi3 .
-	docker build --tag watsor.pi4      --file docker/Dockerfile.pi4 .
+	docker build --tag watsor.pi3      --file docker/Dockerfile.pi3      .
+	docker build --tag watsor.pi4      --file docker/Dockerfile.pi4      .
 
 all: plugin test package

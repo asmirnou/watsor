@@ -84,7 +84,7 @@ class ShapeDetector(Work):
             # Convert to gray color and find contours
             gray_image = cv2.cvtColor(image_np, cv2.COLOR_BGR2GRAY)
             ret, thresh = cv2.threshold(gray_image, 100, 255, cv2.THRESH_BINARY)
-            contours, _ = cv2.findContours(thresh, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+            contours, _ = cv2.findContours(thresh, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)[-2:]
 
             # Detect shape type and bounding box
             c, d = 0, 0

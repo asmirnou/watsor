@@ -83,6 +83,6 @@ def contours_key(contour):
 
 def find_contours(alpha_channel):
     ret, thresh = cv2.threshold(255 - alpha_channel, 0, 255, cv2.THRESH_BINARY_INV)
-    contours, _ = cv2.findContours(thresh, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+    contours, _ = cv2.findContours(thresh, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)[-2:]
     contours.sort(key=contours_key)
     return contours
