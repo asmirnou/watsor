@@ -1,4 +1,4 @@
-FROM balenalib/raspberrypi4-64-ubuntu:bionic AS base
+FROM balenalib/raspberrypi4-64-debian:buster
 
 RUN [ "cross-build-start" ]
 
@@ -40,7 +40,7 @@ RUN install_packages \
         shapely \
         werkzeug \
         paho-mqtt \
-        https://dl.google.com/coral/python/tflite_runtime-2.1.0.post1-cp36-cp36m-linux_aarch64.whl
+        https://dl.google.com/coral/python/tflite_runtime-2.1.0.post1-cp37-cp37m-linux_aarch64.whl
 
 # Build latest userland tools and FFmpeg with hardware acceleration support
 #RUN install_packages \
