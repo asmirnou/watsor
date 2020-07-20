@@ -271,7 +271,9 @@ A `secrets.yaml` will be resolved first by looking in the same folder as the YAM
 
 ### HomeAssistant integration
 
-Watsor can communicate with [HomeAssistant](https://www.home-assistant.io/) via [MQTT](http://mqtt.org/) - "Internet of Things" connectivity protocol. Please refer to [demo project](https://github.com/asmirnou/watsor-haas) to examine the configuration files.
+The easiest way to get started is using Watsor [add-ons](https://github.com/asmirnou/watsor-hassio-addons) for Home Assistant.
+
+Watsor can communicate with [HomeAssistant](https://www.home-assistant.io/) via [MQTT](http://mqtt.org/) - "Internet of Things" connectivity protocol. Please refer to [demo project](https://github.com/asmirnou/watsor-ha-demo) to examine the configuration files.
 
 <details>
 <summary>To configure optional MQTT client add the following lines (expand the snippet):</summary>

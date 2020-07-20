@@ -52,6 +52,12 @@ RUN echo "deb https://packages.cloud.google.com/apt coral-edgetpu-stable main" >
         libedgetpu1-std \
         python3-edgetpu
 
+# Enable udevd in the container to get rid of "Error in device opening" for the Coral USB Accelerator.
+# The container also need to be run privileged, so we leave the default root user.
+ENV UDEV=1
+RUN echo 'SUBSYSTEM=="usb", ATTRS{idVendor}=="1a6e", GROUP="plugdev"' >> /etc/udev/rules.d/99-tpu.rules \
+    && echo 'SUBSYSTEM=="usb", ATTRS{idVendor}=="18d1", GROUP="plugdev"' >> /etc/udev/rules.d/99-tpu.rule
+
 # Cleanup and dedicated user
 RUN rm -rf /var/lib/apt/lists/* && \
     apt-get autoremove -y && apt-get autoclean -y && \
