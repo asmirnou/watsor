@@ -1,3 +1,7 @@
+<p align="center">
+  <img width="40%" align="center" alt="logo" src="https://github.com/asmirnou/watsor/raw/master/watsor.png">
+</p>
+
 # Watsor
 
 Watsor detects objects in video stream using deep learning-based approach. Intended primarily for surveillance it works in sheer real-time analysing the most recent frame to deliver fastest reaction against a detected threat.
@@ -153,7 +157,9 @@ Select main layer with the rest of the image and change the **opacity** of the l
 
 The following depicts said above:
 
-![Zones demo](config/zones_demo.jpeg) 
+<p align="center">
+  <img src="https://github.com/asmirnou/watsor/raw/master/config/zones_demo.jpeg">
+</p>
 
 You can select many zones and of any shape, but make sure they don't overlap, otherwise several zones merge in one.
 

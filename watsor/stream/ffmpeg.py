@@ -22,9 +22,10 @@ class FFmpegDecoder(ReadDetectPublish):
     to perform their work for when detection and filtering are complete.
     """
 
-    def __init__(self, name: str, stop_event, log_queue, frame_queue, frame_buffer, cmd_args, stdin=sp.DEVNULL,
+    def __init__(self, name: str, stop_event, log_queue, frame_queue, frame_buffer, cmd_args, cwd=None, stdin=sp.DEVNULL,
                  kwargs=None):
         self.__cmd_args = cmd_args
+        self.__cwd = cwd
         self.__stdin = stdin
         self.__subprocess = None
         self.__stderr_thread = None
@@ -37,7 +38,7 @@ class FFmpegDecoder(ReadDetectPublish):
         assert self.__subprocess is None or self.__subprocess.poll() is not None, \
             "Subprocess has not terminated yet"
 
-        self.__subprocess = sp.Popen(args=self.__cmd_args,
+        self.__subprocess = sp.Popen(args=self.__cmd_args, cwd=self.__cwd,
                                      stdout=sp.PIPE, stderr=sp.PIPE, stdin=self.__stdin)
         if SIGSTOP is not None:
             self.__subprocess.send_signal(signal.SIGSTOP)
@@ -114,9 +115,10 @@ class FFmpegEncoder(Work):
      in compressed video stream. Exposes FFmpeg subprocess stdout for further re-streaming.
     """
 
-    def __init__(self, name: str, stop_event, log_queue, frame_queue, frame_buffer, cmd_args, stdout=sp.DEVNULL,
+    def __init__(self, name: str, stop_event, log_queue, frame_queue, frame_buffer, cmd_args, cwd=None, stdout=sp.DEVNULL,
                  args=(), kwargs=None):
         self.__cmd_args = cmd_args
+        self.__cwd = cwd
         self.__stdout = stdout
         self.__subprocess = None
         self.__stderr_thread = None
@@ -130,7 +132,7 @@ class FFmpegEncoder(Work):
         assert self.__subprocess is None or self.__subprocess.poll() is not None, \
             "Subprocess has not terminated yet"
 
-        self.__subprocess = sp.Popen(args=self.__cmd_args,
+        self.__subprocess = sp.Popen(args=self.__cmd_args, cwd=self.__cwd,
                                      stdout=self.__stdout, stderr=sp.PIPE, stdin=sp.PIPE)
         if SIGSTOP is not None:
             self.__subprocess.send_signal(signal.SIGSTOP)

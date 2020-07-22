@@ -96,8 +96,8 @@ class _BasicApp:
         self._log_handler.join(30)
 
     def _read_config(self):
-        self._config = normalize(validate(parse(self._args.config_file_name)),
-                                 path.dirname(self._args.config_file_name))
+        self._config_path = path.dirname(self._args.config_file_name)
+        self._config = normalize(validate(parse(self._args.config_file_name)), self._config_path)
 
     def _init_watch_dog(self):
         self._stop_watch_dog_event = threading.Event()
@@ -318,7 +318,7 @@ class Application(_HTTPApplication):
 
         encoder_queue = Queue(1)
         encoder = FFmpegEncoder(camera_name, self._stop_events[0], self._log_queue, encoder_queue,
-                                frame_buffer_out, camera_config['ffmpeg']['encoder'],
+                                frame_buffer_out, camera_config['ffmpeg']['encoder'], self._config_path,
                                 DEVNULL if 'output' in camera_config else PIPE,
                                 kwargs={'log_level': self._args.log_level})
         self._processes.append(encoder)
@@ -370,7 +370,7 @@ class Application(_HTTPApplication):
             all_semaphores[camera_name] = decoder_queue_semaphore
             decoder_queue = BalancedQueue(self._frame_queue, {camera_name: decoder_queue_semaphore}, camera_name)
             decoder = FFmpegDecoder(camera_name, decoder_stop_event, self._log_queue, decoder_queue,
-                                    frame_buffer_in, camera_config['ffmpeg']['decoder'],
+                                    frame_buffer_in, camera_config['ffmpeg']['decoder'], self._config_path,
                                     kwargs={'log_level': self._args.log_level})
             self._processes.append(decoder)
             self._stop_events.append(decoder_stop_event)

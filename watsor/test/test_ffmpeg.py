@@ -48,10 +48,10 @@ class TestFFmpeg(TestCase):
         encoder = FFmpegEncoder("encoder", stop_process_event, log_queue, encoder_frame_queue, encoder_frame_buffer,
                                 ['ffmpeg', '-hide_banner', '-loglevel', 'panic', '-f', 'rawvideo', '-pix_fmt',
                                  'rgb24', '-s', '{}x{}'.format(width, height), '-i', '-', '-an', '-f', 'm4v',
-                                 '-'], PIPE)
+                                 '-'], None, PIPE)
         decoder = FFmpegDecoder("decoder", stop_process_event, log_queue, decoder_frame_queue, decoder_frame_buffer,
                                 ['ffmpeg', '-hide_banner', '-loglevel', 'panic', '-f', 'm4v', '-i', '-', '-f',
-                                 'rawvideo', '-pix_fmt', 'rgb24', '-'], PIPE)
+                                 'rawvideo', '-pix_fmt', 'rgb24', '-'], None, PIPE)
 
         artist = Artist("artist", stop_process_event, log_queue, encoder_frame_queue, encoder_frame_buffer)
         conductor = WorkPublish(Thread, "conductor", stop_process_event, log_queue, artist_subscribe_queue,
