@@ -1,5 +1,5 @@
 <p align="center">
-  <img width="300" src="https://github.com/asmirnou/watsor/raw/master/watsor.png">
+  <img width="40%" align="center" alt="logo" src="https://github.com/asmirnou/watsor/raw/master/watsor.png">
 </p>
 
 # Watsor
