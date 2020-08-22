@@ -248,7 +248,7 @@ You can include values from your system’s environment variables either like [H
  
  `password: !env_var PASSWORD default_password` or 
  
- `input: !ENV "rtsp://${RTSP_USERNAME}:${RTSP_PASSWORD}@192.168.0.10:554`
+ `input: !ENV "rtsp://${RTSP_USERNAME}:${RTSP_PASSWORD}@192.168.0.10:554"`
 
 ### Secrets
 
@@ -436,7 +436,7 @@ Open [http://localhost:8080](http://localhost:8080) to navigate to a simple home
 
 #### Object detection models
 
-Watsor uses Single-Shot Detector (SSD) detector trained to recognize 90 classes of object. The detection model has several types providing the trade-off between accuracy and speed. For example, _MobileNet v1_ is the fastest, but less accurate than _Inception v2_.   
+Watsor uses Single-Shot Detector (SSD) trained to recognize 90 classes of object. The detection model has several types providing the trade-off between accuracy and speed. For example, _MobileNet v1_ is the fastest, but less accurate than _Inception v2_.   
 
 The models are available in several formats depending on the device the inference is being performed on.
  - If you've got [The Coral USB Accelerator](https://coral.ai/products/accelerator/) download one of the models built for Edge TPU (MobileNet v1/v2), rename the file and put in `model/` folder as `edgetpu.tflite`. 
