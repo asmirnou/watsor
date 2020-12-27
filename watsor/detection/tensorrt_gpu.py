@@ -95,7 +95,9 @@ class TensorRTObjectDetector:
         # NMS implementation in TRT 6 only supports DataType.FLOAT
         binding_to_type = {"Input": np.float32,
                            "NMS": np.float32,
-                           "NMS_1": np.int32}
+                           "NMS_1": np.int32,
+                           "Postprocessor": np.float32,
+                           "Postprocessor_1": np.int32}
         for binding in self.__trt_engine:
             shape = self.__trt_engine.get_binding_shape(binding)
             size = trt.volume(shape) * self.__trt_engine.max_batch_size

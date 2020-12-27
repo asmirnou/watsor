@@ -379,8 +379,6 @@ If your GPU supports Half precision (also known as FP16), you can boost performa
 
 `docker run --gpus all --env TRT_FLOAT_PRECISION=16 ...` 
 
-Please note that native GPU support has not landed in docker-compose [yet](https://github.com/docker/compose/issues/6691).
-
 Models for CPU/GPU and EdgeTPU (Coral) are bundled in Docker images. You can use your own models, trained based on those listed in [object detection models](#object-detection-models) section, by mounting the volume at `/usr/share/watsor/model`.
 
 The following table lists the available docker images:
@@ -409,10 +407,12 @@ Watsor works well on Pyhton 3.6, 3.7, 3.8. Use a [virtual environment](https://d
 1. Install module:
 
    ```bash
-   python3 -m pip install[cpu] watsor
+   python3 -m pip install watsor
    ```
    
-   If you've got a [hardware accelerator](#hardware-acceleration-drivers) or are installing the application on a tiny board like Raspberry Pi, take a look at _extra_ profiles `coral`, `cuda` or `lite` in [setup.py](setup.py). The dependencies listed in those profiles need to be installed in advance. Refer to the documentation of the device or take a look at one of the [Docker files](docker/) to understand how the dependencies are installed. 
+   If you've got a [hardware accelerator](#hardware-acceleration-drivers) or are installing the application on a tiny board like Raspberry Pi, take a look at _extra_ profiles `coral`, `cuda` or `lite` in [setup.py](setup.py). The dependencies listed in those profiles need to be installed in advance. Refer to the documentation of the device or take a look at one of the [Docker files](docker/) to understand how the dependencies are installed.
+   
+   <sub>You **don't have** to install TensorFlow GPU support as Watsor performs the inference via pure TensorRT when working on GPU.</sub> 
 
 2. Create `model/` folder, download, unpack and prepare the [object detection models](#object-detection-models) (see the section below).
 
@@ -432,24 +432,22 @@ Watsor works well on Pyhton 3.6, 3.7, 3.8. Use a [virtual environment](https://d
 
 Open [http://localhost:8080](http://localhost:8080) to navigate to a simple home page, where you'll find the links to the cameras video streams, snapshots of object detected classes and metrics.
 
-<sub>Please note that without the hardware accelerator Watsor uses [TensorFlow](https://www.tensorflow.org/) to run the inference on CPU. Watsor is not bound to specific version of TensorFlow and `pip` likely installs the latest. The object detection API of TensorFlow is not yet converted to `2.2.0` and is still based on `1.5.3`, so you won't get much benefit of the latest TensorFlow, but rather far less disk space. You better pre-install TensorFlow `1.5.3` prior to installing Watsor, unless you use it for other purposes. You also **don't have** to install TensorFlow GPU support as Watsor performs the inference via pure TensorRT when working on GPU.</sub>
-
 #### Object detection models
 
-Watsor uses Single-Shot Detector (SSD) trained to recognize 90 classes of object. The detection model has several types providing the trade-off between accuracy and speed. For example, _MobileNet v1_ is the fastest, but less accurate than _Inception v2_.   
+Watsor uses convolutional neural network trained to recognize 90 classes of object. The detection model has several types providing the trade-off between accuracy and speed. For example, _MobileNet v1_ is the fastest, but less accurate than _Inception v2_. The models recommended below are reasonable for video surveillance in real-time, however you are not limited to use only these models.
 
 The models are available in several formats depending on the device the inference is being performed on.
  - If you've got [The Coral USB Accelerator](https://coral.ai/products/accelerator/) download one of the models built for Edge TPU (MobileNet v1/v2), rename the file and put in `model/` folder as `edgetpu.tflite`. 
- - Have [Nvidia CUDA GPU](https://developer.nvidia.com/cuda-gpus) on board - download one of two models (MobileNet / Inception), unpack the archive, rename the file and put in `model/` folder as `gpu.uff`.
- - CPU is used only when there are no accelerators. Inside of TensorFlow archive you can find several files, you need only `frozen_inference_graph.pb` renamed as `cpu.pb` and put in `model/` folder.
+ - Have [Nvidia CUDA GPU](https://developer.nvidia.com/cuda-gpus) on board - download one of the models, unpack the archive, rename the file and put in `model/` folder as `gpu.uff`.
+ - CPU is used only when there are no accelerators. Inside of TensorFlow archive you will find several files, you only need `frozen_inference_graph.pb` renamed as `cpu.pb` and placed in the `model/` folder. New models do not have frozen graph, but there is a `saved_model` folder that needs to be copied in full to the `model/` folder of Watsor. 
  - For single board computer such as Raspberry Pi or [Jetson Nano](https://github.com/asmirnou/watsor/wiki/Deploying-Watsor-to-Jetson-Nano) lightweight model is more suitable. Download and unpack the archive, rename the file and put in `model/` folder as `cpu.tflite`.
 
 | Device | Filename | MobileNet v1 | MobileNet v2 | Inception v2 |
 |---|---|---|---|---|
 | Coral | `model/edgetpu.tflite` | [MobileNet v1](https://github.com/google-coral/edgetpu/raw/master/test_data/ssd_mobilenet_v1_coco_quant_postprocess_edgetpu.tflite) | [MobileNet v2](https://github.com/google-coral/edgetpu/raw/master/test_data/ssd_mobilenet_v2_coco_quant_postprocess_edgetpu.tflite) | N/A |
-| Nvidia CUDA GPU | `model/gpu.uff` | N/A | [MobileNet v2](https://github.com/dusty-nv/jetson-inference/releases/download/model-mirror-190618/SSD-Mobilenet-v2.tar.gz) | [Inception v2](https://github.com/dusty-nv/jetson-inference/releases/download/model-mirror-190618/SSD-Inception-v2.tar.gz) |
+| Nvidia CUDA GPU | `model/gpu.uff` | [MobileNet v1](https://github.com/dusty-nv/jetson-inference/releases/download/model-mirror-190618/SSD-Mobilenet-v1.tar.gz) | [MobileNet v2](https://github.com/dusty-nv/jetson-inference/releases/download/model-mirror-190618/SSD-Mobilenet-v2.tar.gz) | [Inception v2](https://github.com/dusty-nv/jetson-inference/releases/download/model-mirror-190618/SSD-Inception-v2.tar.gz) |
 | CPU | `model/cpu.pb` | [MobileNet v1](http://download.tensorflow.org/models/object_detection/ssd_mobilenet_v1_coco_2018_01_28.tar.gz) | [MobileNet v2](http://download.tensorflow.org/models/object_detection/ssd_mobilenet_v2_coco_2018_03_29.tar.gz) | [Inception v2](http://download.tensorflow.org/models/object_detection/ssd_inception_v2_coco_2018_01_28.tar.gz) |
-| Raspberry Pi & others | `model/cpu.tflite` | [MobileNet v1](https://storage.googleapis.com/download.tensorflow.org/models/tflite/coco_ssd_mobilenet_v1_1.0_quant_2018_06_29.zip) | N/A | N/A | 
+| Raspberry Pi & others | `model/cpu.tflite` | [MobileNet v1](https://storage.googleapis.com/download.tensorflow.org/models/tflite/coco_ssd_mobilenet_v1_1.0_quant_2018_06_29.zip) | [MobileNet v2](https://github.com/asmirnou/todus/raw/models/ssd_mobilenet_v2_quantized_300x300_coco_2019_01_03.zip) | N/A | 
   
 #### Hardware acceleration drivers
 
