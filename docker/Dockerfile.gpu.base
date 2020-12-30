@@ -152,21 +152,12 @@ RUN cd /tmp && \
     ./cmake-$CMAKE_VERSION-Linux-x86_64.sh --prefix=/usr/local --exclude-subdir --skip-license && \
     rm ./cmake-$CMAKE_VERSION-Linux-x86_64.sh
 
-# Build plugin
-COPY ./watsor/plugin /opt/watsor/watsor/plugin/
-COPY ./Makefile /opt/watsor/
-
-WORKDIR /opt/watsor
-
-RUN make plugin
-
 #
 # Copy libraries to the final image
 #
 FROM base AS result
 
 COPY --from=builder /tmp/install /tmp/install
-COPY --from=builder /opt/watsor/build/plugin/libflattenconcat.so /usr/lib
 
 RUN python3 -m pip install /tmp/install/* \
     && rm -r /tmp/install

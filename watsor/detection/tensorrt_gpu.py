@@ -24,7 +24,7 @@ class TensorRTObjectDetector:
         self.__device = cuda.Device(device)
         self.context = self.__device.make_context()
 
-        engine.load_plugins()
+        trt.init_libnvinfer_plugins(engine.TRT_LOGGER, '')
 
         self.__trt_runtime = trt.Runtime(engine.TRT_LOGGER)
         self.__trt_engine = engine.load_engine(self.__trt_runtime, os.path.join(model_path, 'gpu.buf'))

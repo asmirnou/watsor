@@ -438,16 +438,16 @@ Watsor uses convolutional neural network trained to recognize 90 classes of obje
 
 The models are available in several formats depending on the device the inference is being performed on.
  - If you've got [The Coral USB Accelerator](https://coral.ai/products/accelerator/) download one of the models built for Edge TPU (MobileNet v1/v2), rename the file and put in `model/` folder as `edgetpu.tflite`. 
- - Have [Nvidia CUDA GPU](https://developer.nvidia.com/cuda-gpus) on board - download one of the models, unpack the archive, rename the file and put in `model/` folder as `gpu.uff`.
+ - Have [Nvidia CUDA GPU](https://developer.nvidia.com/cuda-gpus) on board - download one of the models, rename the file and put in `model/` folder as `gpu.uff`.
  - CPU is used only when there are no accelerators. Inside of TensorFlow archive you will find several files, you only need `frozen_inference_graph.pb` renamed as `cpu.pb` and placed in the `model/` folder. New models do not have frozen graph, but there is a `saved_model` folder that needs to be copied in full to the `model/` folder of Watsor. 
- - For single board computer such as Raspberry Pi or [Jetson Nano](https://github.com/asmirnou/watsor/wiki/Deploying-Watsor-to-Jetson-Nano) lightweight model is more suitable. Download and unpack the archive, rename the file and put in `model/` folder as `cpu.tflite`.
+ - For single board computer such as Raspberry Pi or [Jetson Nano](https://github.com/asmirnou/watsor/wiki/Deploying-Watsor-to-Jetson-Nano) lightweight model is more suitable. Download and unpack if needed, rename the file and put in `model/` folder as `cpu.tflite`.
 
 | Device | Filename | MobileNet v1 | MobileNet v2 | Inception v2 |
 |---|---|---|---|---|
 | Coral | `model/edgetpu.tflite` | [MobileNet v1](https://github.com/google-coral/edgetpu/raw/master/test_data/ssd_mobilenet_v1_coco_quant_postprocess_edgetpu.tflite) | [MobileNet v2](https://github.com/google-coral/edgetpu/raw/master/test_data/ssd_mobilenet_v2_coco_quant_postprocess_edgetpu.tflite) | N/A |
-| Nvidia CUDA GPU | `model/gpu.uff` | [MobileNet v1](https://github.com/dusty-nv/jetson-inference/releases/download/model-mirror-190618/SSD-Mobilenet-v1.tar.gz) | [MobileNet v2](https://github.com/dusty-nv/jetson-inference/releases/download/model-mirror-190618/SSD-Mobilenet-v2.tar.gz) | [Inception v2](https://github.com/dusty-nv/jetson-inference/releases/download/model-mirror-190618/SSD-Inception-v2.tar.gz) |
+| Nvidia CUDA GPU | `model/gpu.uff` | [MobileNet v1](https://github.com/asmirnou/todus/raw/models/ssd_mobilenet_v1_coco_2018_01_28.uff) | [MobileNet v2](https://github.com/asmirnou/todus/raw/models/ssd_mobilenet_v2_coco_2018_03_29.uff) | [Inception v2](https://github.com/asmirnou/todus/raw/models/ssd_inception_v2_coco_2018_01_28.uff) |
 | CPU | `model/cpu.pb` | [MobileNet v1](http://download.tensorflow.org/models/object_detection/ssd_mobilenet_v1_coco_2018_01_28.tar.gz) | [MobileNet v2](http://download.tensorflow.org/models/object_detection/ssd_mobilenet_v2_coco_2018_03_29.tar.gz) | [Inception v2](http://download.tensorflow.org/models/object_detection/ssd_inception_v2_coco_2018_01_28.tar.gz) |
-| Raspberry Pi & others | `model/cpu.tflite` | [MobileNet v1](https://storage.googleapis.com/download.tensorflow.org/models/tflite/coco_ssd_mobilenet_v1_1.0_quant_2018_06_29.zip) | [MobileNet v2](https://github.com/asmirnou/todus/raw/models/ssd_mobilenet_v2_quantized_300x300_coco_2019_01_03.zip) | N/A | 
+| Raspberry Pi & others | `model/cpu.tflite` | [MobileNet v1](https://storage.googleapis.com/download.tensorflow.org/models/tflite/coco_ssd_mobilenet_v1_1.0_quant_2018_06_29.zip) | [MobileNet v2](https://github.com/asmirnou/todus/raw/models/ssd_mobilenet_v2_quantized_300x300_coco_2019_01_03.tflite) | N/A | 
   
 #### Hardware acceleration drivers
 
@@ -466,8 +466,6 @@ Have [Nvidia CUDA GPU](https://developer.nvidia.com/cuda-gpus) on board - instal
 - [TensorRT 6.0.1](https://docs.nvidia.com/deeplearning/tensorrt/archives/tensorrt-601/tensorrt-install-guide/index.html)
 - [PyCUDA 2019.1.2](https://docs.nvidia.com/deeplearning/tensorrt/archives/tensorrt-601/tensorrt-install-guide/index.html#installing-pycuda)
 
-Please note that having installed GPU support you have to compile also a plugin for UFF model that is not shipped by Watsor Python module. See [building from source](#building-from-source) for reference.
-
 ## Building from source
 
 Clone Git repository:
@@ -485,8 +483,6 @@ source venv/bin/activate
 
 make install
 ```
-
-Running Watsor with GPU support requires the [plugin](watsor/plugin/FlattenConcat.cpp). To compile the plugin make sure you have installed CUDA and TensorRT, then run `make plugin` and copy the library either in Python module or system path. 
 
 ## Troubleshooting
  

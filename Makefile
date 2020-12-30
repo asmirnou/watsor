@@ -12,13 +12,6 @@ venv:
 install:
 	python -m pip install -r requirements.txt
 
-plugin:
-	mkdir -p build/plugin && \
-	cd build/plugin && \
-	cmake ../../watsor/plugin
-	$(MAKE) -C build/plugin all
-	cp build/plugin/*.so watsor/
-
 test:
 	python watsor/test/test_spawn.py
 
