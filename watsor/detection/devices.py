@@ -1,17 +1,5 @@
 import os
 
-try:
-    from edgetpu.basic import edgetpu_utils
-    from watsor.detection.edge_tpu import CoralObjectDetector
-except ImportError:
-    pass
-
-try:
-    import pycuda.driver as cuda
-    from watsor.detection.tensorrt_gpu import TensorRTObjectDetector
-except ImportError:
-    pass
-
 
 def edge_tpus():
     """Yields all available unassigned Edge TPU devices.
@@ -20,16 +8,19 @@ def edge_tpus():
     """
 
     try:
+        from pycoral.utils.edgetpu import list_edge_tpus
+        from watsor.detection.edge_tpu import CoralObjectDetector
+
         env_cvd = os.environ.get("CORAL_VISIBLE_DEVICES")
         visible_devices = [x.strip() for x in env_cvd.split(",")] if env_cvd is not None else []
 
-        devices = edgetpu_utils.ListEdgeTpuPaths(edgetpu_utils.EDGE_TPU_STATE_UNASSIGNED)
-        for device in devices:
-            if len(visible_devices) > 0 and device not in visible_devices:
+        devices = list_edge_tpus()
+        for idx, device in enumerate(devices):
+            if len(visible_devices) > 0 and device['path'] not in visible_devices:
                 continue
 
-            yield device, CoralObjectDetector
-    except (RuntimeError, NameError):
+            yield '{}:{}'.format(device['type'], idx), CoralObjectDetector
+    except (RuntimeError, ImportError):
         return
 
 
@@ -45,9 +36,12 @@ def cuda_gpus():
     """
     ndevices = 0
     try:
+        import pycuda.driver as cuda
+        from watsor.detection.tensorrt_gpu import TensorRTObjectDetector
+
         cuda.init()
         ndevices = cuda.Device.count()
-    except (RuntimeError, TypeError, NameError):
+    except (RuntimeError, TypeError, ImportError):
         pass
     except cuda.RuntimeError:
         pass

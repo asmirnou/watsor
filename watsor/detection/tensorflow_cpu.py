@@ -8,19 +8,6 @@ from watsor.stream.share import Detection
 
 class TensorFlowObjectDetector:
     """Performs inference on CPU using TensorFlow.
-
-    Disables GPU support in TensorFlow as in favour of dedicated class TensorRTObjectDetector,
-    which performs the inference more effectively:
-
-    - Object detection on TensorFlow is memory hungry: it reserves nearly all of the GPU memory and
-      requires not less than 2 GiB just for initialization.
-
-      TensorRT performs the inference consuming only 365 MiB of GPU memory.
-
-    - GPU support shipped with TensorFlow is compatible with limited number of CUDA-enabled devices.
-      In many of cases to be able to work with GPU TensorFlow has to be rebuilt from sources.
-
-      TensorRT runtime supports all CUDA GPUs out of the box.
     """
 
     def __init__(self, model_path):
@@ -39,15 +26,11 @@ class TensorFlowObjectDetector:
             
     @staticmethod
     def __init_tf2():
-        tf.config.set_visible_devices([], 'GPU')
+        pass
 
     def __init_tf1(self):
         self.__detection_graph = tf.Graph()
-        self.__sess = tf.compat.v1.Session(
-            graph=self.__detection_graph,
-            config=tf.compat.v1.ConfigProto(
-                device_count={'GPU': 0}
-            ))
+        self.__sess = tf.compat.v1.Session(graph=self.__detection_graph)
 
     def __load_saved_model_tf2(self, model_path):
         self.__serving = tf.saved_model.load(model_path,
