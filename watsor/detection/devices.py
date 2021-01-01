@@ -16,10 +16,11 @@ def edge_tpus():
 
         devices = list_edge_tpus()
         for idx, device in enumerate(devices):
-            if len(visible_devices) > 0 and device['path'] not in visible_devices:
+            device_name = '{}:{}'.format(device['type'], idx)
+            if len(visible_devices) > 0 and device_name not in visible_devices:
                 continue
 
-            yield '{}:{}'.format(device['type'], idx), CoralObjectDetector
+            yield device_name, CoralObjectDetector
     except (RuntimeError, ImportError):
         return
 
