@@ -35,15 +35,15 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
         shapely \
         werkzeug \
         paho-mqtt \
-        tensorflow==1.15.3
+        tensorflow \
+        https://github.com/google-coral/pycoral/releases/download/release-frogfish/tflite_runtime-2.5.0-cp36-cp36m-linux_x86_64.whl
 
 # Install the Edge TPU runtime
-RUN echo "deb https://packages.cloud.google.com/apt coral-edgetpu-stable main" > /etc/apt/sources.list.d/coral-edgetpu.list && \
+RUN echo "deb https://packages.cloud.google.com/apt coral-edgetpu-stable main" | tee /etc/apt/sources.list.d/coral-edgetpu.list && \
     wget -q -O - https://packages.cloud.google.com/apt/doc/apt-key.gpg | apt-key add - && \
-    apt-get update && \
-    apt-get install -y --no-install-recommends \
+    apt-get update && apt-get install -y --no-install-recommends \
         libedgetpu1-std \
-        python3-edgetpu
+        python3-pycoral
 
 # Cleanup and dedicated user
 RUN rm -rf /var/lib/apt/lists/* && \
@@ -56,7 +56,7 @@ RUN rm -rf /var/lib/apt/lists/* && \
 
 # Download object detection models
 RUN mkdir model && \
-    wget -q https://github.com/google-coral/edgetpu/raw/master/test_data/ssd_mobilenet_v2_coco_quant_postprocess_edgetpu.tflite -O model/edgetpu.tflite --trust-server-names && \
+    wget -q https://github.com/google-coral/test_data/raw/master/ssdlite_mobiledet_coco_qat_postprocess_edgetpu.tflite -O model/edgetpu.tflite --trust-server-names && \
     wget -q http://download.tensorflow.org/models/object_detection/ssd_mobilenet_v1_coco_2018_01_28.tar.gz -O model/cpu.tar.gz && \
     tar -xf model/cpu.tar.gz -C model ssd_mobilenet_v1_coco_2018_01_28/frozen_inference_graph.pb --strip-components 1 && \
     mv model/frozen_inference_graph.pb model/cpu.pb && \

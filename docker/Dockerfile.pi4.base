@@ -40,7 +40,7 @@ RUN install_packages \
         shapely \
         werkzeug \
         paho-mqtt \
-        https://dl.google.com/coral/python/tflite_runtime-2.1.0.post1-cp37-cp37m-linux_aarch64.whl
+        https://github.com/google-coral/pycoral/releases/download/release-frogfish/tflite_runtime-2.5.0-cp37-cp37m-linux_aarch64.whl
 
 # Build latest userland tools and FFmpeg with hardware acceleration support
 #RUN install_packages \
@@ -106,11 +106,11 @@ RUN install_packages \
 #    pkg-config
 
 # Install the Edge TPU runtime
-RUN echo "deb https://packages.cloud.google.com/apt coral-edgetpu-stable main" > /etc/apt/sources.list.d/coral-edgetpu.list && \
+RUN echo "deb https://packages.cloud.google.com/apt coral-edgetpu-stable main" | tee /etc/apt/sources.list.d/coral-edgetpu.list && \
     wget -q -O - https://packages.cloud.google.com/apt/doc/apt-key.gpg | apt-key add - && \
     install_packages \
         libedgetpu1-std \
-        python3-edgetpu
+        python3-pycoral
 
 # Enable udevd in the container to get rid of "Error in device opening" for the Coral USB Accelerator.
 # The container also need to be run privileged, so we leave the default root user.
@@ -129,7 +129,7 @@ RUN rm -rf /var/lib/apt/lists/* && \
 
 # Download object detection models
 RUN mkdir model && \
-    wget -q https://github.com/google-coral/edgetpu/raw/master/test_data/ssd_mobilenet_v2_coco_quant_postprocess_edgetpu.tflite -O model/edgetpu.tflite --trust-server-names && \
+    wget -q https://github.com/google-coral/test_data/raw/master/ssdlite_mobiledet_coco_qat_postprocess_edgetpu.tflite -O model/edgetpu.tflite --trust-server-names && \
     wget -q https://storage.googleapis.com/download.tensorflow.org/models/tflite/coco_ssd_mobilenet_v1_1.0_quant_2018_06_29.zip -O model/cpu.zip && \
     unzip model/cpu.zip detect.tflite -d model && \
     mv model/detect.tflite model/cpu.tflite && \

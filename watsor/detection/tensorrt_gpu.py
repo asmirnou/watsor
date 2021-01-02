@@ -27,12 +27,22 @@ class TensorRTObjectDetector:
         trt.init_libnvinfer_plugins(engine.TRT_LOGGER, '')
 
         self.__trt_runtime = trt.Runtime(engine.TRT_LOGGER)
-        self.__trt_engine = engine.load_engine(self.__trt_runtime, os.path.join(model_path, 'gpu.buf'))
+        try:
+            self.__trt_engine = engine.load_engine(self.__trt_runtime, os.path.join(model_path, 'gpu.buf'))
+        except Exception as e:
+            self.__finalize()
+            raise e
 
         self._allocate_buffers()
 
         self.__model_shape = itemgetter(1, 2)(self.__trt_engine.get_binding_shape('Input'))
         self.__execution_context = self.__trt_engine.create_execution_context()
+
+    def __finalize(self):
+        self.context.pop()
+        self.context = None
+
+        clear_context_caches()
 
     @property
     def device_name(self):
@@ -42,10 +52,7 @@ class TensorRTObjectDetector:
         return self
 
     def __exit__(self, exc_type, exc_value, traceback):
-        self.context.pop()
-        self.context = None
-
-        clear_context_caches()
+        self.__finalize()
 
     def detect(self, image_shape, image_np, detections: List[Detection]):
         # Resize to model shape

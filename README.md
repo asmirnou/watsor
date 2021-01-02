@@ -411,9 +411,7 @@ Watsor works well on Pyhton 3.6, 3.7, 3.8. Use a [virtual environment](https://d
    ```
    
    If you've got a [hardware accelerator](#hardware-acceleration-drivers) or are installing the application on a tiny board like Raspberry Pi, take a look at _extra_ profiles `coral`, `cuda` or `lite` in [setup.py](setup.py). The dependencies listed in those profiles need to be installed in advance. Refer to the documentation of the device or take a look at one of the [Docker files](docker/) to understand how the dependencies are installed.
-   
-   <sub>You **don't have** to install TensorFlow GPU support as Watsor performs the inference via pure TensorRT when working on GPU.</sub> 
-
+    
 2. Create `model/` folder, download, unpack and prepare the [object detection models](#object-detection-models) (see the section below).
 
 3. Write the config file by following the [guide](#configuration) above, take [this config](config/config.yaml) as an example.
@@ -434,13 +432,15 @@ Open [http://localhost:8080](http://localhost:8080) to navigate to a simple home
 
 #### Object detection models
 
-Watsor uses convolutional neural network trained to recognize 90 classes of object. The detection model has several types providing the trade-off between accuracy and speed. For example, _MobileNet v1_ is the fastest, but less accurate than _Inception v2_. The models recommended below are reasonable for video surveillance in real-time, however you are not limited to use only these models.
+Watsor uses convolutional neural network trained to recognize 90 classes of object. The detection model has several types providing the trade-off between accuracy and speed. For example, _MobileNet v1_ is the fastest, but less accurate than _Inception v2_. The models recommended below are reasonable for video surveillance in real-time, however you are not limited to use only these models as Watsor supports any one from [TensorFlow Model Garden](https://github.com/tensorflow/models/tree/master/research/object_detection). It's worth trying their newest models with higher average precision.
 
 The models are available in several formats depending on the device the inference is being performed on.
  - If you've got [The Coral USB Accelerator](https://coral.ai/products/accelerator/) download one of the models built for Edge TPU (MobileNet v1/v2), rename the file and put in `model/` folder as `edgetpu.tflite`. 
  - Have [Nvidia CUDA GPU](https://developer.nvidia.com/cuda-gpus) on board - download one of the models, rename the file and put in `model/` folder as `gpu.uff`.
- - CPU is used only when there are no accelerators. Inside of TensorFlow archive you will find several files, you only need `frozen_inference_graph.pb` renamed as `cpu.pb` and placed in the `model/` folder. New models do not have frozen graph, but there is a `saved_model` folder that needs to be copied in full to the `model/` folder of Watsor. 
- - For single board computer such as Raspberry Pi or [Jetson Nano](https://github.com/asmirnou/watsor/wiki/Deploying-Watsor-to-Jetson-Nano) lightweight model is more suitable. Download and unpack if needed, rename the file and put in `model/` folder as `cpu.tflite`.
+ - CPU is used only when there are no accelerators or their models provided. Inside of TensorFlow archive you will find several files, you only need `frozen_inference_graph.pb` renamed as `cpu.pb` and placed in the `model/` folder. New models do not have frozen graph, but there is a `saved_model` folder that needs to be copied in full to the `model/` folder of Watsor. 
+ 
+    <sub>Please note that _saved model_ takes longer to start. If TensorFlow is configured properly, GPU will be involved.</sub>
+ - For single board computer such as Raspberry Pi or [Jetson Nano](https://github.com/asmirnou/watsor/wiki/Deploying-Watsor-to-Jetson-Nano) lightweight model is more efficient. Download and unpack if needed, rename the file and put in `model/` folder as `cpu.tflite`.
 
 | Device | Filename | MobileNet v1 | MobileNet v2 | Inception v2 |
 |---|---|---|---|---|
@@ -455,16 +455,16 @@ Use of hardware accelerator is optional, but highly recommended as object detect
 
 Watsor supports **multiple** accelerators, equally balancing the load among them. Having at least one accelerator connected Watsor uses the hardware for computation, less loading the CPU. It falls over to CPU running Tensorflow if no accelerator is available.
 
-To restrict the devices that Watsor sees set `CORAL_VISIBLE_DEVICES` or `CUDA_VISIBLE_DEVICES` environmental variables to a comma-separated list of device paths/IDs to make only those devices visible to the application. The device path/ID can be known from application logs after enabling debug mode with the following command-line option: `--log-level debug`  
+To restrict the devices that Watsor sees set `CORAL_VISIBLE_DEVICES` or `CUDA_VISIBLE_DEVICES` environmental variables to a comma-separated list of device IDs to make only those devices visible to the application. The device ID can be known from application logs after enabling debug mode with the following command-line option: `--log-level debug`  
 
-If you've got the Coral install the [Edge TPU runtime](https://coral.ai/docs/accelerator/get-started/#1-install-the-edge-tpu-runtime) and [Edge TPU Python library](https://coral.ai/docs/edgetpu/api-intro/#install-the-library-and-examples).
+If you've got the Coral install the [Edge TPU runtime](https://coral.ai/docs/accelerator/get-started/#1-install-the-edge-tpu-runtime) and [PyCoral API](https://coral.ai/software/#pycoral-api).
 
 Have [Nvidia CUDA GPU](https://developer.nvidia.com/cuda-gpus) on board - install the following components (now the hard part, you'd better consider [Docker](#docker):
 - [NVIDIA® GPU drivers](https://www.nvidia.com/drivers) for your graphic card
-- [CUDA® 10.2.89](https://docs.nvidia.com/cuda/archive/10.2/)
-- [cuDNN 7.6.5.32](https://docs.nvidia.com/deeplearning/sdk/cudnn-archived/cudnn_765/cudnn-developer-guide/index.html)
-- [TensorRT 6.0.1](https://docs.nvidia.com/deeplearning/tensorrt/archives/tensorrt-601/tensorrt-install-guide/index.html)
-- [PyCUDA 2019.1.2](https://docs.nvidia.com/deeplearning/tensorrt/archives/tensorrt-601/tensorrt-install-guide/index.html#installing-pycuda)
+- [CUDA® 11.1.1](https://docs.nvidia.com/cuda/archive/11.1.1/#installation-guides)
+- [cuDNN 8.0.5](https://docs.nvidia.com/deeplearning/cudnn/archives/cudnn-805/install-guide/index.html)
+- [TensorRT 7.2.2](https://docs.nvidia.com/deeplearning/tensorrt/archives/tensorrt-722/install-guide/index.html)
+- [PyCUDA 2020.1](https://docs.nvidia.com/deeplearning/tensorrt/archives/tensorrt-722/install-guide/index.html#installing-pycuda)
 
 ## Building from source
 

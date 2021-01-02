@@ -1,3 +1,4 @@
+from os import path
 from numpy import uint8
 from typing import Dict
 from multiprocessing.sharedctypes import Array
@@ -30,23 +31,26 @@ def create_object_detectors(delegate_class, stop_event, log_queue, frame_queue, 
     def gen_name():
         return "detector{}".format(len(detectors) + 1)
 
-    def append_detector(*args):
+    def append_detector(_clazz, *_args):
         detectors.append(ObjectDetector(delegate_class, gen_name(), stop_event, log_queue, frame_queue, frame_buffers,
                                         kwargs={**kwargs,
-                                                'detector_class': clazz,
-                                                'detector_args': (model_path, *args,)}))
+                                                'detector_class': _clazz,
+                                                'detector_args': (model_path, *_args,)}))
 
-    for device, clazz in edge_tpus():
-        append_detector(device)
+    if path.isfile(path.join(model_path, 'edgetpu.tflite')):
+        for device, clazz in edge_tpus():
+            append_detector(clazz, device)
 
-    for device, clazz in cuda_gpus():
-        append_detector(device)
+    if path.isfile(path.join(model_path, 'gpu.buf')):
+        for device, clazz in cuda_gpus():
+            append_detector(clazz, device)
 
     if _ALWAYS_USE_CPU or len(detectors) == 0:
         for clazz in cpus():
-            append_detector()
+            append_detector(clazz)
 
-    assert len(detectors) > 0, "Failed to create an object detector. Make sure TensorFlow is installed."
+    assert len(detectors) > 0, "Failed to create an object detector." \
+                               "Make sure TensorFlow is installed and model files are provided."
 
     return detectors
 

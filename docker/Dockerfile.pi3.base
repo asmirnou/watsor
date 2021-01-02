@@ -26,6 +26,13 @@ RUN install_packages \
     libopenblas-dev libatlas-base-dev libblas-dev \
     libilmbase23 libgtk-3-0 libatk1.0-0 libpango-1.0-0 libjasper1 libopenexr23 libswscale5 libpangocairo-1.0-0 libtiff5 libcairo2 libwebp6 libgdk-pixbuf2.0-0 libcairo-gobject2
 
+# Install the Edge TPU runtime
+RUN echo "deb https://packages.cloud.google.com/apt coral-edgetpu-stable main" | tee /etc/apt/sources.list.d/coral-edgetpu.list && \
+    wget -q -O - https://packages.cloud.google.com/apt/doc/apt-key.gpg | apt-key add - && \
+    install_packages \
+        libedgetpu1-std \
+        python3-pycoral
+
 # Install Python dependencies
 RUN python3 -m pip install --upgrade \
         pip \
@@ -43,14 +50,7 @@ RUN python3 -m pip install --upgrade \
         Pillow \
         Shapely && \
     python3 -m pip install \
-        https://dl.google.com/coral/python/tflite_runtime-2.1.0.post1-cp37-cp37m-linux_armv7l.whl
-
-# Install the Edge TPU runtime
-RUN echo "deb https://packages.cloud.google.com/apt coral-edgetpu-stable main" > /etc/apt/sources.list.d/coral-edgetpu.list && \
-    wget -q -O - https://packages.cloud.google.com/apt/doc/apt-key.gpg | apt-key add - && \
-    install_packages \
-        libedgetpu1-std \
-        python3-edgetpu
+        https://github.com/google-coral/pycoral/releases/download/release-frogfish/tflite_runtime-2.5.0-cp37-cp37m-linux_armv7l.whl
 
 # Enable udevd in the container to get rid of "Error in device opening" for the Coral USB Accelerator.
 # The container also need to be run privileged, so we leave the default root user.
@@ -69,7 +69,7 @@ RUN rm -rf /var/lib/apt/lists/* && \
 
 # Download object detection models
 RUN mkdir model && \
-    wget -q https://github.com/google-coral/edgetpu/raw/master/test_data/ssd_mobilenet_v2_coco_quant_postprocess_edgetpu.tflite -O model/edgetpu.tflite --trust-server-names && \
+    wget -q https://github.com/google-coral/test_data/raw/master/ssdlite_mobiledet_coco_qat_postprocess_edgetpu.tflite -O model/edgetpu.tflite --trust-server-names && \
     wget -q https://storage.googleapis.com/download.tensorflow.org/models/tflite/coco_ssd_mobilenet_v1_1.0_quant_2018_06_29.zip -O model/cpu.zip && \
     unzip model/cpu.zip detect.tflite -d model && \
     mv model/detect.tflite model/cpu.tflite && \

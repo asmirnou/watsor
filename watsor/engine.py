@@ -1,6 +1,12 @@
 import argparse
 import os
-import tensorrt as trt
+
+try:
+    import tensorrt as trt
+except ImportError:
+    if __name__ == '__main__':
+        print('TensorRT is not installed, skipping.')
+        exit()
 
 TRT_LOGGER = trt.Logger(trt.Logger.WARNING)
 
@@ -62,7 +68,7 @@ if __name__ == '__main__':
     # Parse arguments passed
     args = parser.parse_args()
 
-    # Using supplied .uff file alongside with UffParser build TensorRT engine
+    # Build TensorRT engine
     print("Building TensorRT engine. This may take few minutes.")
     trt.init_libnvinfer_plugins(TRT_LOGGER, '')
     trt_engine = build_engine(
