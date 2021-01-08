@@ -3,8 +3,10 @@ import os
 
 try:
     import tensorrt as trt
-except ImportError:
-    if __name__ == '__main__':
+except ImportError as e:
+    if __name__ != '__main__':
+        raise e
+    else:
         print('TensorRT is not installed, skipping.')
         exit()
 

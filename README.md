@@ -4,7 +4,7 @@
 
 # Watsor
 
-Watsor detects objects in video stream using deep learning-based approach. Intended primarily for surveillance it works in sheer real-time analysing the most recent frame to deliver fastest reaction against a detected threat.
+Watsor detects objects in video stream using deep learning-based approach. Intended primarily for surveillance it works in sheer real-time analysing the most recent frame to deliver the fastest reaction against a detected threat.
 
 ## Table of contents
   * [What it does](#what-it-does)
@@ -35,7 +35,7 @@ Watsor detects objects in video stream using deep learning-based approach. Inten
 - Capable to limit detection [zones](#zones-and-masks) using [mask image](#zones-and-masks) with alpha channel.
 - Supports multiple hardware accelerators such as [The Coral USB Accelerator](https://coral.ai/products/accelerator/) and [Nvidia CUDA GPUs](https://developer.nvidia.com/cuda-gpus) to speed up detection algorithms. 
 - Reports the detected objects via [MQTT](http://mqtt.org/) protocol primarily for integration with [HomeAssistant](https://www.home-assistant.io/).
-- Allows to control video decoder using the commands published over MQTT.
+- Allows controlling video decoder using the commands published over MQTT.
 - Broadcasts video stream with rendered object detections in [MPEG-TS](https://en.wikipedia.org/wiki/MPEG_transport_stream) and [Motion JPEG](https://en.wikipedia.org/wiki/Motion_JPEG) formats over HTTP.
 - Captures video from any source and encodes video with rendered object detections in any format supported by [FFmpeg](https://ffmpeg.org/).
 
@@ -386,7 +386,8 @@ The following table lists the available docker images:
 | Image | Suitable for |
 |---|---|
 | [watsor](https://hub.docker.com/r/smirnou/watsor) | x86-64 |
-| [watsor.gpu](https://hub.docker.com/r/smirnou/watsor.gpu) | x86-64 with Nvidia CUDA GPU  |
+| [watsor.gpu](https://hub.docker.com/r/smirnou/watsor.gpu) | x86-64 with Nvidia CUDA GPU |
+| [watsor.jetson](https://hub.docker.com/r/smirnou/watsor.jetson) | Jetson devices (Xavier, TX2, and Nano) |
 | [watsor.pi3](https://hub.docker.com/r/smirnou/watsor.pi3) | Raspberry PI 3 or 4 with 32-bit OS |
 | [watsor.pi4](https://hub.docker.com/r/smirnou/watsor.pi4) | Raspberry PI 4 with 64-bit OS |
 
