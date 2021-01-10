@@ -4,7 +4,7 @@ COPY . /opt/watsor
 
 WORKDIR /opt/watsor
 
-RUN python3 -m pip install -r requirements.txt && \
+RUN python3 -m pip install -r requirements.txt --no-deps && \
     rm -r /opt/watsor
 
 USER watsor

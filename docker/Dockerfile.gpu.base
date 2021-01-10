@@ -5,13 +5,9 @@ FROM watsor.base AS base
 #
 # https://gitlab.com/nvidia/container-images/cuda/-/blob/master/dist/11.1/ubuntu18.04-x86_64/base/Dockerfile
 #
-RUN apt-get update && apt-get install -y --no-install-recommends \
-    gnupg2 curl ca-certificates && \
-    curl -fsSL https://developer.download.nvidia.com/compute/cuda/repos/ubuntu1804/x86_64/7fa2af80.pub | apt-key add - && \
+RUN wget -q -O - https://developer.download.nvidia.com/compute/cuda/repos/ubuntu1804/x86_64/7fa2af80.pub | apt-key add - && \
     echo "deb https://developer.download.nvidia.com/compute/cuda/repos/ubuntu1804/x86_64 /" > /etc/apt/sources.list.d/cuda.list && \
-    echo "deb https://developer.download.nvidia.com/compute/machine-learning/repos/ubuntu1804/x86_64 /" > /etc/apt/sources.list.d/nvidia-ml.list && \
-    apt-get purge --autoremove -y curl \
-    && rm -rf /var/lib/apt/lists/*
+    echo "deb https://developer.download.nvidia.com/compute/machine-learning/repos/ubuntu1804/x86_64 /" > /etc/apt/sources.list.d/nvidia-ml.list
 
 ENV CUDA_VERSION 11.1.1
 LABEL com.nvidia.cuda.version="${CUDA_VERSION}"
@@ -95,6 +91,12 @@ RUN version=$TENSORRT_VERSION-1+cuda11.1 && \
 #
 FROM base AS builder
 
+# Install basic packages
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    build-essential \
+    python3-dev \
+    && rm -rf /var/lib/apt/lists/*
+
 #
 # CUDA 11.1 devel
 #
@@ -112,32 +114,6 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     libcusparse-11-1=11.3.0.10-1 \
     libcusparse-dev-11-1=11.3.0.10-1 \
     && apt-mark hold libnccl-dev \
-    && rm -rf /var/lib/apt/lists/*
-
-#
-# cuDNN 8.0.5.39 devel
-#
-# https://gitlab.com/nvidia/container-images/cuda/-/blob/master/dist/11.1/ubuntu18.04-x86_64/devel/cudnn8/Dockerfile
-#
-RUN apt-get update && apt-get install -y --no-install-recommends \
-    libcudnn8-dev=$CUDNN_VERSION-1+cuda11.1 \
-    && apt-mark hold libcudnn8 && \
-    rm -rf /var/lib/apt/lists/*
-
-#
-# TensorRT 7.2.2 devel
-#
-# https://docs.nvidia.com/deeplearning/tensorrt/archives/tensorrt-722/install-guide/index.html#maclearn-net-repo-install-rpm
-#
-RUN version=$TENSORRT_VERSION-1+cuda11.1 && \
-    apt-get update && apt-get install -y --no-install-recommends \
-    libnvinfer-dev=${version} \
-    libnvonnxparsers-dev=${version} libnvparsers-dev=${version} \
-    libnvinfer-plugin-dev=${version} \
-    && apt-mark hold \
-    libnvinfer-dev \
-    libnvonnxparsers-dev libnvparsers-dev \
-    libnvinfer-plugin-dev \
     && rm -rf /var/lib/apt/lists/*
 
 # Install PyCUDA
