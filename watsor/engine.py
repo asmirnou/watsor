@@ -1,8 +1,14 @@
-import ctypes
 import argparse
-import sys
 import os
-import tensorrt as trt
+
+try:
+    import tensorrt as trt
+except ImportError as e:
+    if __name__ != '__main__':
+        raise e
+    else:
+        print('TensorRT is not installed, skipping.')
+        exit()
 
 TRT_LOGGER = trt.Logger(trt.Logger.WARNING)
 
@@ -38,18 +44,6 @@ def load_engine(trt_runtime, engine_path):
     return engine
 
 
-def load_plugins():
-    trt.init_libnvinfer_plugins(TRT_LOGGER, '')
-
-    libname = 'libflattenconcat.so'
-    basedir = os.path.abspath(os.path.dirname(__file__))
-    libpath = os.path.join(basedir, libname)
-    if os.path.exists(libpath):
-        ctypes.CDLL(libpath)
-    else:
-        ctypes.CDLL(libname)
-
-
 TRT_PRECISION_TO_DATATYPE = {
     16: trt.DataType.HALF,
     32: trt.DataType.FLOAT
@@ -76,15 +70,9 @@ if __name__ == '__main__':
     # Parse arguments passed
     args = parser.parse_args()
 
-    try:
-        load_plugins()
-    except Exception as e:
-        print("Error: {}\n{}".format(e, "Make sure FlattenConcat custom plugin layer is provided"),
-              file=sys.stderr)
-        sys.exit(1)
-
-    # Using supplied .uff file alongside with UffParser build TensorRT engine
+    # Build TensorRT engine
     print("Building TensorRT engine. This may take few minutes.")
+    trt.init_libnvinfer_plugins(TRT_LOGGER, '')
     trt_engine = build_engine(
         uff_model_path=args.uff_model_path,
         trt_engine_datatype=TRT_PRECISION_TO_DATATYPE[args.precision],

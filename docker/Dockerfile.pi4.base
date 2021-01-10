@@ -1,4 +1,4 @@
-FROM balenalib/raspberrypi4-64-debian:buster
+FROM balenalib/raspberrypi4-64-debian:buster AS base
 
 RUN [ "cross-build-start" ]
 
@@ -7,42 +7,45 @@ ENV TF_CPP_MIN_LOG_LEVEL=2
 
 # Install basic packages
 RUN install_packages \
-    apt-transport-https \
     ca-certificates \
-    software-properties-common \
-    build-essential \
     wget \
-    gnupg \
-    unzip
-
-# Install FFmpeg and some prerequisites
-RUN install_packages \
-    ffmpeg \
-    zlib1g-dev \
-    libpng-dev libjpeg-dev \
-    libgeos-dev
-
-# Install Python and dependencies
-RUN install_packages \
-    python3-dev \
+    unzip \
+    gnupg2 \
+    libgeos-c1v5 libgeos-3.7.1 \
     python3-pip \
-    python3-opencv \
-    python3-scipy && \
-    python3 -m pip install --upgrade \
+    && python3 -m pip install --upgrade \
         pip \
         setuptools \
-        wheel && \
-    python3 -m pip install --upgrade \
-        PyYaml \
-        Pillow \
-        cerberus \
+        wheel
+
+#
+# Use the previous stage as a new temporary stage for building libraries
+#
+FROM base AS builder-wheels
+
+LABEL watsor.builder="watsor.pi4.base.builder"
+
+# Build Wheel archives for the requirements and dependencies
+RUN install_packages \
+    build-essential \
+    python3-dev \
+    libgeos-dev \
+    && python3 -m pip wheel --wheel-dir=/tmp/install \
         numpy \
+        scipy \
+        opencv-python-headless \
+        PyYaml \
+        cerberus \
         shapely \
         werkzeug \
         paho-mqtt \
-        https://dl.google.com/coral/python/tflite_runtime-2.1.0.post1-cp37-cp37m-linux_aarch64.whl
-
-# Build latest userland tools and FFmpeg with hardware acceleration support
+        https://github.com/google-coral/pycoral/releases/download/release-frogfish/tflite_runtime-2.5.0-cp37-cp37m-linux_aarch64.whl
+        
+#FROM base AS builder-ffmpeg
+#
+#LABEL watsor.builder="watsor.pi4.base.builder.ffmpeg"
+#
+## Build latest userland tools and FFmpeg with hardware acceleration support
 #RUN install_packages \
 #    libx264-dev \
 #    libx265-dev \
@@ -50,8 +53,9 @@ RUN install_packages \
 #    git \
 #    gcc-arm* \
 #    g++-arm* \
-#    pkg-config && \
-#    cd / && \
+#    pkg-config
+#
+#RUN cd /opt && \
 #    git clone --depth 1 https://github.com/raspberrypi/userland.git && \
 #    mkdir -p userland/build/arm-linux/release && \
 #    cd userland/build/arm-linux/release && \
@@ -62,9 +66,9 @@ RUN install_packages \
 #        -DCMAKE_INSTALL_PREFIX="/opt/vc" \
 #        -DCMAKE_INSTALL_RPATH='${CMAKE_INSTALL_PREFIX}/lib' \
 #        ../../.. && \
-#    make -j"$(nproc)" install && \
-#    rm -rf userland && \
-#    cd / && \
+#    make -j"$(nproc)" install
+#
+#RUN cd /opt && \
 #    FFMPEG_VERSION=4.2.2 && \
 #    wget http://ffmpeg.org/releases/ffmpeg-${FFMPEG_VERSION}.tar.gz && \
 #    tar zxf ffmpeg-${FFMPEG_VERSION}.tar.gz && \
@@ -83,6 +87,7 @@ RUN install_packages \
 #        --enable-libx265 \
 #        --enable-omx \
 #        --enable-omx-rpi \
+#        --enable-v4l2_m2m \
 #        --enable-mmal \            https://github.com/raspberrypi/userland/issues/630
 #        --enable-neon \
 #        --enable-shared \
@@ -95,22 +100,29 @@ RUN install_packages \
 #                        -I/opt/vc/include/IL" \
 #        --extra-ldflags="-Wl,-rpath-link,/opt/vc/lib \
 #                         -Wl,-rpath,/opt/vc/lib" && \
-#    make -j"$(nproc)" install && \
-#    cd / && \
-#    rm -rf ffmpeg-${FFMPEG_VERSION} && \
-#    apt-get purge --autoremove -y \
-#    cmake \
-#    git \
-#    gcc-arm* \
-#    g++-arm* \
-#    pkg-config
+#    make -j"$(nproc)" install
+
+#
+# Copy libraries to the final image
+#
+FROM base AS result
+
+COPY --from=builder-wheels /tmp/install /tmp/install
+
+# Install Wheel archives built at previous stage
+RUN python3 -m pip install --upgrade /tmp/install/* \
+    && rm -r /tmp/install
+
+# Install FFmpeg
+RUN install_packages \
+    ffmpeg
 
 # Install the Edge TPU runtime
-RUN echo "deb https://packages.cloud.google.com/apt coral-edgetpu-stable main" > /etc/apt/sources.list.d/coral-edgetpu.list && \
-    wget -q -O - https://packages.cloud.google.com/apt/doc/apt-key.gpg | apt-key add - && \
-    install_packages \
-        libedgetpu1-std \
-        python3-edgetpu
+RUN echo "deb https://packages.cloud.google.com/apt coral-edgetpu-stable main" | tee /etc/apt/sources.list.d/coral-edgetpu.list \
+    && wget -q -O - https://packages.cloud.google.com/apt/doc/apt-key.gpg | apt-key add - \
+    && install_packages \
+       libedgetpu1-std \
+       python3-pycoral
 
 # Enable udevd in the container to get rid of "Error in device opening" for the Coral USB Accelerator.
 # The container also need to be run privileged, so we leave the default root user.
@@ -118,10 +130,8 @@ ENV UDEV=1
 RUN echo 'SUBSYSTEM=="usb", ATTRS{idVendor}=="1a6e", GROUP="plugdev"' >> /etc/udev/rules.d/99-tpu.rules \
     && echo 'SUBSYSTEM=="usb", ATTRS{idVendor}=="18d1", GROUP="plugdev"' >> /etc/udev/rules.d/99-tpu.rule
 
-# Cleanup and dedicated user
-RUN rm -rf /var/lib/apt/lists/* && \
-    apt-get autoremove -y && apt-get autoclean -y && \
-    mkdir /etc/watsor /usr/share/watsor /var/log/watsor && \
+# Dedicated user
+RUN mkdir /etc/watsor /usr/share/watsor /var/log/watsor && \
     addgroup -gid 1001 watsor && \
     adduser -uid 1001 -gid 1001 -gecos watsor -home /usr/share/watsor --no-create-home --disabled-password watsor && \
     usermod -a --groups video,plugdev watsor && \
@@ -129,7 +139,7 @@ RUN rm -rf /var/lib/apt/lists/* && \
 
 # Download object detection models
 RUN mkdir model && \
-    wget -q https://github.com/google-coral/edgetpu/raw/master/test_data/ssd_mobilenet_v2_coco_quant_postprocess_edgetpu.tflite -O model/edgetpu.tflite --trust-server-names && \
+    wget -q https://github.com/google-coral/test_data/raw/master/ssdlite_mobiledet_coco_qat_postprocess_edgetpu.tflite -O model/edgetpu.tflite --trust-server-names && \
     wget -q https://storage.googleapis.com/download.tensorflow.org/models/tflite/coco_ssd_mobilenet_v1_1.0_quant_2018_06_29.zip -O model/cpu.zip && \
     unzip model/cpu.zip detect.tflite -d model && \
     mv model/detect.tflite model/cpu.tflite && \

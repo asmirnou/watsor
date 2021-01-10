@@ -1,164 +1,126 @@
 FROM watsor.base AS base
 
 #
-# CUDA 10.2 base
+# CUDA 11.1 base
 #
-# https://gitlab.com/nvidia/container-images/cuda/blob/master/dist/ubuntu18.04/10.2/base/Dockerfile
+# https://gitlab.com/nvidia/container-images/cuda/-/blob/master/dist/11.1/ubuntu18.04-x86_64/base/Dockerfile
 #
-RUN apt-get update && apt-get install -y --no-install-recommends \
-gnupg2 curl ca-certificates && \
-    curl -fsSL https://developer.download.nvidia.com/compute/cuda/repos/ubuntu1804/x86_64/7fa2af80.pub | apt-key add - && \
+RUN wget -q -O - https://developer.download.nvidia.com/compute/cuda/repos/ubuntu1804/x86_64/7fa2af80.pub | apt-key add - && \
     echo "deb https://developer.download.nvidia.com/compute/cuda/repos/ubuntu1804/x86_64 /" > /etc/apt/sources.list.d/cuda.list && \
-    echo "deb https://developer.download.nvidia.com/compute/machine-learning/repos/ubuntu1804/x86_64 /" > /etc/apt/sources.list.d/nvidia-ml.list && \
-    apt-get purge --autoremove -y curl && \
-rm -rf /var/lib/apt/lists/*
+    echo "deb https://developer.download.nvidia.com/compute/machine-learning/repos/ubuntu1804/x86_64 /" > /etc/apt/sources.list.d/nvidia-ml.list
 
-ENV CUDA_VERSION 10.2.89
+ENV CUDA_VERSION 11.1.1
 LABEL com.nvidia.cuda.version="${CUDA_VERSION}"
-
-ENV CUDA_PKG_VERSION 10-2=$CUDA_VERSION-1
 
 # For libraries in the cuda-compat-* package: https://docs.nvidia.com/cuda/eula/index.html#attachment-a
 RUN apt-get update && apt-get install -y --no-install-recommends \
-        cuda-cudart-$CUDA_PKG_VERSION \
-cuda-compat-10-2 && \
-ln -s cuda-10.2 /usr/local/cuda && \
+    cuda-cudart-11-1=11.1.74-1 \
+    cuda-compat-11-1 \
+    cuda-cupti-11-1 \
+    && ln -s cuda-11.1 /usr/local/cuda && \
     rm -rf /var/lib/apt/lists/*
 
 # Required for nvidia-docker v1
 RUN echo "/usr/local/nvidia/lib" >> /etc/ld.so.conf.d/nvidia.conf && \
-    echo "/usr/local/nvidia/lib64" >> /etc/ld.so.conf.d/nvidia.conf
+    echo "/usr/local/nvidia/lib64" >> /etc/ld.so.conf.d/nvidia.conf \
+    # Required for TensroFlow 2.4.0 to load GPU
+    && ln -s /usr/local/cuda/lib64/libcusolver.so.11 /usr/local/cuda/lib64/libcusolver.so.10
 
 ENV PATH /usr/local/nvidia/bin:/usr/local/cuda/bin:${PATH}
 ENV LD_LIBRARY_PATH /usr/local/nvidia/lib:/usr/local/nvidia/lib64
+ENV LD_LIBRARY_PATH /usr/local/cuda/lib64:${LD_LIBRARY_PATH}
 
 # nvidia-container-runtime
 ENV NVIDIA_VISIBLE_DEVICES all
 ENV NVIDIA_DRIVER_CAPABILITIES compute,video,utility
-ENV NVIDIA_REQUIRE_CUDA "cuda>=10.2 brand=tesla,driver>=384,driver<385 brand=tesla,driver>=396,driver<397 brand=tesla,driver>=410,driver<411 brand=tesla,driver>=418,driver<419"
+ENV NVIDIA_REQUIRE_CUDA "cuda>=11.1 brand=tesla,driver>=418,driver<419 brand=tesla,driver>=440,driver<441 brand=tesla,driver>=450,driver<451"
 
 #
-# CUDA 10.2 runtime
+# CUDA 11.1 runtime
 #
-# https://gitlab.com/nvidia/container-images/cuda/blob/master/dist/ubuntu18.04/10.2/runtime/Dockerfile
+# https://gitlab.com/nvidia/container-images/cuda/-/blob/master/dist/11.1/ubuntu18.04-x86_64/runtime/Dockerfile
 #
-ENV NCCL_VERSION 2.5.6
+ENV NCCL_VERSION 2.7.8
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    cuda-libraries-$CUDA_PKG_VERSION \
-cuda-nvtx-$CUDA_PKG_VERSION \
-libcublas10=10.2.2.89-1 \
-libnccl2=$NCCL_VERSION-1+cuda10.2 && \
-    apt-mark hold libnccl2 && \
-    rm -rf /var/lib/apt/lists/*
+    cuda-libraries-11-1=11.1.1-1 \
+    libnpp-11-1=11.1.2.301-1 \
+    cuda-nvtx-11-1=11.1.74-1 \
+    libcublas-11-1=11.3.0.106-1 \
+    libnccl2=$NCCL_VERSION-1+cuda11.1 \
+    && apt-mark hold libnccl2 \
+    && rm -rf /var/lib/apt/lists/*
 
 #
-# cuDNN 7.6.5.32 runtime
+# cuDNN 8.0.5.39 runtime
 #
-# https://gitlab.com/nvidia/container-images/cuda/blob/master/dist/ubuntu18.04/10.2/runtime/cudnn7/Dockerfile
+# https://gitlab.com/nvidia/container-images/cuda/-/blob/master/dist/11.1/ubuntu18.04-x86_64/runtime/cudnn8/Dockerfile
 #
-ENV CUDNN_VERSION 7.6.5.32
+ENV CUDNN_VERSION 8.0.5.39
+
 LABEL com.nvidia.cudnn.version="${CUDNN_VERSION}"
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    libcudnn7=$CUDNN_VERSION-1+cuda10.2 \
-&& \
-    apt-mark hold libcudnn7 && \
+    libcudnn8=$CUDNN_VERSION-1+cuda11.1 \
+    && apt-mark hold libcudnn8 && \
     rm -rf /var/lib/apt/lists/*
 
 #
-# TensorRT 6.0.1.8
+# TensorRT 7.2.2
 #
-# https://docs.nvidia.com/deeplearning/sdk/tensorrt-archived/tensorrt-601/tensorrt-install-guide/index.html#maclearn-net-repo-install
+# https://docs.nvidia.com/deeplearning/tensorrt/archives/tensorrt-722/install-guide/index.html#maclearn-net-repo-install-rpm
 #
-ENV TENSORRT_VERSION 6.0.1
+ENV TENSORRT_VERSION 7.2.2
 LABEL com.nvidia.tensorrt.version="${TENSORRT_VERSION}"
 
-RUN version=$TENSORRT_VERSION-1+cuda10.2 && \
+RUN version=$TENSORRT_VERSION-1+cuda11.1 && \
     apt-get update && apt-get install -y --no-install-recommends \
-    libnvinfer6=${version} \
-    libnvonnxparsers6=${version} libnvparsers6=${version} \
-    libnvinfer-plugin6=${version} \
+    libnvinfer7=${version} \
+    libnvonnxparsers7=${version} libnvparsers7=${version} \
+    libnvinfer-plugin7=${version} \
     python3-libnvinfer=${version} \
-&& \
-    apt-mark hold \
-    libnvinfer6 \
-    libnvonnxparsers6 libnvparsers6 \
-    libnvinfer-plugin6 \
+    && apt-mark hold \
+    libnvinfer7 \
+    libnvonnxparsers7 libnvparsers7 \
+    libnvinfer-plugin7 \
     python3-libnvinfer \
-&& \
-    rm -rf /var/lib/apt/lists/*
+    && rm -rf /var/lib/apt/lists/*
 
 #
 # Use the previous stage as a new temporary stage for building libraries
 #
 FROM base AS builder
 
+LABEL watsor.builder="watsor.gpu.base.builder"
+
+# Install basic packages
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    build-essential \
+    python3-dev \
+    && rm -rf /var/lib/apt/lists/*
+
 #
-# CUDA 10.2 devel
+# CUDA 11.1 devel
 #
-# https://gitlab.com/nvidia/container-images/cuda/blob/master/dist/ubuntu18.04/10.2/devel/Dockerfile
+# https://gitlab.com/nvidia/container-images/cuda/-/blob/master/dist/11.1/ubuntu18.04-x86_64/devel/Dockerfile
 #
 RUN apt-get update && apt-get install -y --no-install-recommends \
-        cuda-nvml-dev-$CUDA_PKG_VERSION \
-        cuda-command-line-tools-$CUDA_PKG_VERSION \
-cuda-libraries-dev-$CUDA_PKG_VERSION \
-        cuda-minimal-build-$CUDA_PKG_VERSION \
-        libnccl-dev=$NCCL_VERSION-1+cuda10.2 \
-libcublas-dev=10.2.2.89-1 \
-&& \
-    rm -rf /var/lib/apt/lists/*
-
-ENV LIBRARY_PATH /usr/local/cuda/lib64/stubs
-
-#
-# cuDNN 7.6.5.32 devel
-#
-# https://gitlab.com/nvidia/container-images/cuda/blob/master/dist/ubuntu18.04/10.2/devel/cudnn7/Dockerfile
-#
-RUN apt-get update && apt-get install -y --no-install-recommends \
-    libcudnn7-dev=$CUDNN_VERSION-1+cuda10.2 \
-&& \
-    rm -rf /var/lib/apt/lists/*
-
-#
-# TensorRT 6.0.1.8 devel
-#
-# https://docs.nvidia.com/deeplearning/sdk/tensorrt-archived/tensorrt-601/tensorrt-install-guide/index.html#maclearn-net-repo-install
-#
-RUN version=$TENSORRT_VERSION-1+cuda10.2 && \
-    apt-get update && apt-get install -y --no-install-recommends \
-    libnvinfer-dev=${version} \
-    libnvonnxparsers-dev=${version} libnvparsers-dev=${version} \
-    libnvinfer-plugin-dev=${version} \
-&& \
-    apt-mark hold \
-    libnvinfer-dev \
-    libnvonnxparsers-dev libnvparsers-dev \
-    libnvinfer-plugin-dev \
-&& \
-    rm -rf /var/lib/apt/lists/*
+    cuda-nvml-dev-11-1=11.1.74-1 \
+    cuda-command-line-tools-11-1=11.1.1-1 \
+    cuda-nvprof-11-1=11.1.105-1 \
+    libnpp-dev-11-1=11.1.2.301-1 \
+    cuda-libraries-dev-11-1=11.1.1-1 \
+    cuda-minimal-build-11-1=11.1.1-1 \
+    libnccl-dev=2.7.8-1+cuda11.1 \
+    libcublas-dev-11-1=11.3.0.106-1 \
+    libcusparse-11-1=11.3.0.10-1 \
+    libcusparse-dev-11-1=11.3.0.10-1 \
+    && apt-mark hold libnccl-dev \
+    && rm -rf /var/lib/apt/lists/*
 
 # Install PyCUDA
 RUN python3 -m pip install pycuda \
     && python3 -m pip wheel --wheel-dir /tmp/install pycuda
-
-# Install Cmake
-ENV CMAKE_VERSION 3.14.4
-
-RUN cd /tmp && \
-    wget https://github.com/Kitware/CMake/releases/download/v$CMAKE_VERSION/cmake-$CMAKE_VERSION-Linux-x86_64.sh && \
-    chmod +x cmake-$CMAKE_VERSION-Linux-x86_64.sh && \
-    ./cmake-$CMAKE_VERSION-Linux-x86_64.sh --prefix=/usr/local --exclude-subdir --skip-license && \
-    rm ./cmake-$CMAKE_VERSION-Linux-x86_64.sh
-
-# Build plugin
-COPY ./watsor/plugin /opt/watsor/watsor/plugin/
-COPY ./Makefile /opt/watsor/
-
-WORKDIR /opt/watsor
-
-RUN make plugin
 
 #
 # Copy libraries to the final image
@@ -166,17 +128,13 @@ RUN make plugin
 FROM base AS result
 
 COPY --from=builder /tmp/install /tmp/install
-COPY --from=builder /opt/watsor/build/plugin/libflattenconcat.so /usr/lib
 
 RUN python3 -m pip install /tmp/install/* \
     && rm -r /tmp/install
 
 # Download object detection UFF model
 RUN mkdir model && \
-    wget -q https://github.com/dusty-nv/jetson-inference/releases/download/model-mirror-190618/SSD-Mobilenet-v2.tar.gz -O model/gpu.tar.gz && \
-    tar -xf model/gpu.tar.gz -C model SSD-Mobilenet-v2/ssd_mobilenet_v2_coco.uff --strip-components 1 && \
-    mv model/ssd_mobilenet_v2_coco.uff model/gpu.uff && \
-    rm model/gpu.tar.gz && \
+    wget -q https://github.com/asmirnou/todus/raw/models/ssd_mobilenet_v2_coco_2018_03_29.uff -O model/gpu.uff && \
     mv model/gpu.uff /usr/share/watsor/model && \
     chown watsor:watsor /usr/share/watsor/model/gpu.uff && \
     rm -r model

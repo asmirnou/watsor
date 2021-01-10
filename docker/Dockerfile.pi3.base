@@ -1,6 +1,6 @@
 # The device types Debian Balena base images have the Raspbian package source added
 # and Raspbian userland pre-installed
-FROM balenalib/raspberrypi3-debian-python:3.7.7-buster
+FROM balenalib/raspberrypi3-debian-python:3.7-buster AS base
 
 RUN [ "cross-build-start" ]
 
@@ -9,48 +9,63 @@ ENV TF_CPP_MIN_LOG_LEVEL=2
 
 # Install basic packages
 RUN install_packages \
-    apt-transport-https \
     ca-certificates \
-    software-properties-common \
-    build-essential \
     wget \
-    gnupg \
-    unzip
-
-# Install FFmpeg with hardware acceleration support and some prerequisites
-RUN install_packages \
-    ffmpeg \
-    zlib1g \
-    libpng-dev libjpeg-dev \
-    libgeos-dev \
-    libopenblas-dev libatlas-base-dev libblas-dev \
-    libilmbase23 libgtk-3-0 libatk1.0-0 libpango-1.0-0 libjasper1 libopenexr23 libswscale5 libpangocairo-1.0-0 libtiff5 libcairo2 libwebp6 libgdk-pixbuf2.0-0 libcairo-gobject2
-
-# Install Python dependencies
-RUN python3 -m pip install --upgrade \
+    unzip \
+    gnupg2 \
+    libatlas3-base libilmbase23 libopenexr23 \
+    libgeos-c1v5 libgeos-3.7.1 \
+    && pip install --upgrade \
         pip \
         setuptools \
-        wheel && \
-    python3 -m pip install --upgrade \
+        wheel
+
+#
+# Use the previous stage as a new temporary stage for building libraries
+#
+FROM base AS builder-wheels
+
+LABEL watsor.builder="watsor.pi3.base.builder"
+
+# Build Wheel archives for the requirements and dependencies
+RUN install_packages \
+    build-essential \
+    python3-dev \
+    libgeos-dev \
+    && pip wheel --wheel-dir=/tmp/install \
         PyYaml \
         cerberus \
         werkzeug \
-        paho-mqtt && \
-    python3 -m pip install --upgrade --extra-index-url https://www.piwheels.org/simple \
+        paho-mqtt \
+        Shapely \
+    && pip wheel --wheel-dir=/tmp/install --extra-index-url https://www.piwheels.org/simple \
         numpy \
         scipy \
-        opencv-python-headless==4.1.0.25 \
-        Pillow \
-        Shapely && \
-    python3 -m pip install \
-        https://dl.google.com/coral/python/tflite_runtime-2.1.0.post1-cp37-cp37m-linux_armv7l.whl
+        opencv-python-headless \
+        https://github.com/google-coral/pycoral/releases/download/release-frogfish/tflite_runtime-2.5.0-cp37-cp37m-linux_armv7l.whl
+
+#
+# Copy libraries to the final image
+#
+FROM base AS result
+
+COPY --from=builder-wheels /tmp/install /tmp/install
+
+# Install Wheel archives built at previous stage
+RUN install_packages python3-numpy \
+    && pip install --upgrade /tmp/install/* \
+    && rm -r /tmp/install
+
+# Install FFmpeg
+RUN install_packages \
+    ffmpeg
 
 # Install the Edge TPU runtime
-RUN echo "deb https://packages.cloud.google.com/apt coral-edgetpu-stable main" > /etc/apt/sources.list.d/coral-edgetpu.list && \
-    wget -q -O - https://packages.cloud.google.com/apt/doc/apt-key.gpg | apt-key add - && \
-    install_packages \
-        libedgetpu1-std \
-        python3-edgetpu
+RUN echo "deb https://packages.cloud.google.com/apt coral-edgetpu-stable main" | tee /etc/apt/sources.list.d/coral-edgetpu.list \
+    && wget -q -O - https://packages.cloud.google.com/apt/doc/apt-key.gpg | apt-key add - \
+    && install_packages \
+       libedgetpu1-std \
+       python3-pycoral
 
 # Enable udevd in the container to get rid of "Error in device opening" for the Coral USB Accelerator.
 # The container also need to be run privileged, so we leave the default root user.
@@ -58,10 +73,8 @@ ENV UDEV=1
 RUN echo 'SUBSYSTEM=="usb", ATTRS{idVendor}=="1a6e", GROUP="plugdev"' >> /etc/udev/rules.d/99-tpu.rules \
     && echo 'SUBSYSTEM=="usb", ATTRS{idVendor}=="18d1", GROUP="plugdev"' >> /etc/udev/rules.d/99-tpu.rule
 
-# Cleanup and dedicated user
-RUN rm -rf /var/lib/apt/lists/* && \
-    apt-get autoremove -y && apt-get autoclean -y && \
-    mkdir /etc/watsor /usr/share/watsor /var/log/watsor && \
+# Dedicated user
+RUN mkdir /etc/watsor /usr/share/watsor /var/log/watsor && \
     addgroup -gid 1001 watsor && \
     adduser -uid 1001 -gid 1001 -gecos watsor -home /usr/share/watsor --no-create-home --disabled-password watsor && \
     usermod -a --groups video,plugdev watsor && \
@@ -69,7 +82,7 @@ RUN rm -rf /var/lib/apt/lists/* && \
 
 # Download object detection models
 RUN mkdir model && \
-    wget -q https://github.com/google-coral/edgetpu/raw/master/test_data/ssd_mobilenet_v2_coco_quant_postprocess_edgetpu.tflite -O model/edgetpu.tflite --trust-server-names && \
+    wget -q https://github.com/google-coral/test_data/raw/master/ssdlite_mobiledet_coco_qat_postprocess_edgetpu.tflite -O model/edgetpu.tflite --trust-server-names && \
     wget -q https://storage.googleapis.com/download.tensorflow.org/models/tflite/coco_ssd_mobilenet_v1_1.0_quant_2018_06_29.zip -O model/cpu.zip && \
     unzip model/cpu.zip detect.tflite -d model && \
     mv model/detect.tflite model/cpu.tflite && \

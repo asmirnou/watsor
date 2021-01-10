@@ -14,7 +14,8 @@ if __name__ == '__main__':
 
     args, unknown = parser.parse_known_args()
 
-    if not os.path.isfile(os.path.join(args.model_path, 'gpu.buf')):
+    if os.path.isfile(os.path.join(args.model_path, 'gpu.uff')) and not \
+            os.path.isfile(os.path.join(args.model_path, 'gpu.buf')):
         engine = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'engine.py')
         subprocess.run(['python3', '-u', engine,
                         '-i', os.path.join(args.model_path, 'gpu.uff'),

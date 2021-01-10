@@ -15,7 +15,7 @@ build/
 config/
 docker/
 model/
-helm/
+.git
 .gitignore
 .coveragerc
 *.log*

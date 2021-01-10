@@ -1,12 +1,19 @@
 from setuptools import setup, find_packages
-import sys
+from subprocess import run, PIPE
 
 with open("README.md", "r", encoding="UTF-8") as fh:
     long_description = fh.read()
 
+try:
+    result = run(['git', 'describe', '--tags'], universal_newlines=True, stdout = PIPE)
+except FileNotFoundError:
+    result = None
+version = result.stdout.splitlines()[0] \
+    if result is not None and result.returncode == 0 and len(result.stdout) > 0 else 'dev'
+
 setup(
     name="watsor",
-    version="1.0.5",
+    version=version,
     author="Alexander Smirnov",
     author_email="aliaksandr.smirnou@gmail.com",
     description="Object detection for video surveillance",
