@@ -91,6 +91,8 @@ RUN version=$TENSORRT_VERSION-1+cuda11.1 && \
 #
 FROM base AS builder
 
+LABEL watsor.builder="watsor.gpu.base.builder"
+
 # Install basic packages
 RUN apt-get update && apt-get install -y --no-install-recommends \
     build-essential \

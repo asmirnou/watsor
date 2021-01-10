@@ -20,6 +20,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 #
 FROM base AS builder
 
+LABEL watsor.builder="watsor.base.builder"
+
 # Build Wheel archives for the requirements and dependencies
 RUN apt-get update && apt-get install -y --no-install-recommends \
     build-essential \

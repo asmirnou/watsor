@@ -23,6 +23,8 @@ RUN install_packages \
 #
 FROM base AS builder-wheels
 
+LABEL watsor.builder="watsor.pi4.base.builder"
+
 # Build Wheel archives for the requirements and dependencies
 RUN install_packages \
     build-essential \
@@ -40,6 +42,8 @@ RUN install_packages \
         https://github.com/google-coral/pycoral/releases/download/release-frogfish/tflite_runtime-2.5.0-cp37-cp37m-linux_aarch64.whl
         
 #FROM base AS builder-ffmpeg
+#
+#LABEL watsor.builder="watsor.pi4.base.builder.ffmpeg"
 #
 ## Build latest userland tools and FFmpeg with hardware acceleration support
 #RUN install_packages \

@@ -19,6 +19,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 #
 FROM base AS builder
 
+LABEL watsor.builder="watsor.jetson.base.builder"
+
 # Install Python modules
 ENV CPATH=$CPATH:/usr/local/cuda/targets/aarch64-linux/include
 ENV LIBRARY_PATH=$LIBRARY_PATH:/usr/local/cuda/targets/aarch64-linux/lib

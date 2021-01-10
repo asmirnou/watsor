@@ -43,5 +43,6 @@ image:
 	docker buildx build $(call release_tags,.jetson) --file docker/Dockerfile.jetson      . --platform linux/arm64
 	docker build        $(call release_tags,.pi3)    --file docker/Dockerfile.pi3         .
 	docker build        $(call release_tags,.pi4)    --file docker/Dockerfile.pi4         .
+	docker/tag-builders.sh
 
 all: test package

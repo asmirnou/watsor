@@ -25,6 +25,8 @@ RUN install_packages \
 #
 FROM base AS builder-wheels
 
+LABEL watsor.builder="watsor.pi3.base.builder"
+
 # Build Wheel archives for the requirements and dependencies
 RUN install_packages \
     build-essential \
