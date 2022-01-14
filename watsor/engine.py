@@ -18,7 +18,8 @@ def build_engine(uff_model_path, trt_engine_datatype=trt.DataType.FLOAT,
     with trt.Builder(TRT_LOGGER) as builder, \
             builder.create_network() as network, \
             trt.UffParser() as uff_parser:
-        builder.max_workspace_size = 1 << 30
+        config = builder.create_builder_config()
+        config.max_workspace_size = 1 << 30
         builder.max_batch_size = batch_size
         if trt_engine_datatype == trt.DataType.HALF:
             builder.fp16_mode = True
@@ -27,7 +28,7 @@ def build_engine(uff_model_path, trt_engine_datatype=trt.DataType.FLOAT,
         uff_parser.register_output("MarkOutput_0")
         uff_parser.parse(uff_model_path, network)
 
-        return builder.build_cuda_engine(network)
+        return builder.build_serialized_network(network, config)
 
 
 def save_engine(engine, engine_dest_path):

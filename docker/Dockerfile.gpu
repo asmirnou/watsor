@@ -11,7 +11,11 @@ USER watsor
 
 WORKDIR /
 
-CMD ["python3", "-m", "watsor.main_for_gpu", \
-     "--log-path", "/var/log/watsor", \
-     "--config", "/etc/watsor/config.yaml", \
-     "--model-path", "/usr/share/watsor/model"]
+CMD ["tail", "-f", "/dev/null"]
+#CMD ["python3", "-m", "watsor.main_for_gpu", \
+#     "--log-path", "/var/log/watsor", \
+#     "--config", "/etc/watsor/config.yaml", \
+#     "--model-path", "/usr/share/watsor/model"]
+
+# for testing:
+#python3 -m watsor.main_for_gpu --log-path /var/log/watsor --config /etc/watsor/config.yaml --model-path /usr/share/watsor/model
