@@ -78,8 +78,14 @@ class DrawEffect(object):
         pt2 = (left + text_width + 2 * margin, text_bottom)
 
         cropped_image = image[pt1[1]:pt2[1], pt1[0]:pt2[0]]
+        if len(cropped_image) == 0:
+            return
         solid = np.full(cropped_image.shape, box_color, dtype=np.uint8)
+        if len(solid) == 0:
+            return
         blended = cv2.addWeighted(cropped_image, alpha, solid, 1 - alpha, 0)
+        if blended is None:
+            return
         image[pt1[1]:pt2[1], pt1[0]:pt2[0]] = blended
 
         cv2.putText(image, display_str,
