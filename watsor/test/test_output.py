@@ -1,3 +1,4 @@
+import numpy as np
 from unittest import TestCase, installHandler, main
 from unittest.mock import MagicMock
 from threading import Thread
@@ -7,6 +8,7 @@ from multiprocessing import Queue, Event
 from time import time
 from watsor.stream.share import FrameBuffer, State
 from watsor.output.snapshot import Snapshot
+from watsor.output.draw import DrawEffect
 from watsor.stream.log import LogHandler
 from watsor.stream.work import Payload
 from watsor.config.coco import COCO_CLASSES
@@ -31,6 +33,21 @@ class TestOutput(TestCase):
         """
 
         installHandler()
+
+    def test_draw(self):
+        width = 2
+        height = 2
+
+        frame_buffer = FrameBuffer(1, width, height)
+        frame = frame_buffer.frames[0]
+
+        self._mock_detections(frame)
+
+        image_shape, image_np_in = frame.get_numpy_image(np.uint8)
+        image_np_out = np.array(image_np_in)
+
+        effect = DrawEffect()
+        effect.apply(image_np_in, image_np_out, image_shape, frame.header, frame.header)
 
     def test_snapshot(self):
         width = 100
@@ -58,12 +75,7 @@ class TestOutput(TestCase):
             frame_index = 0
             frame = frame_buffer.frames[frame_index]
 
-            frame.header.detections[0].label = COCO_CLASSES.index('book')
-            frame.header.detections[0].bounding_box.x_min = 1
-            frame.header.detections[0].bounding_box.y_min = 2
-            frame.header.detections[0].bounding_box.x_max = 3
-            frame.header.detections[0].bounding_box.y_max = 4
-            frame.header.epoch = time()
+            self._mock_detections(frame)
 
             frame.latch.next()
             frame.latch.next()
@@ -91,6 +103,15 @@ class TestOutput(TestCase):
             'height': height,
             'detect': [{'book': {}}]
         }
+
+    @staticmethod
+    def _mock_detections(frame):
+        frame.header.detections[0].label = COCO_CLASSES.index('book')
+        frame.header.detections[0].bounding_box.x_min = 1
+        frame.header.detections[0].bounding_box.y_min = 2
+        frame.header.detections[0].bounding_box.x_max = 3
+        frame.header.detections[0].bounding_box.y_max = 4
+        frame.header.epoch = time()
 
 
 if __name__ == '__main__':
