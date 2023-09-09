@@ -28,7 +28,7 @@ class TensorRTObjectDetector:
 
         self.__trt_runtime = trt.Runtime(engine.TRT_LOGGER)
         try:
-            self.__trt_engine = engine.load_engine(self.__trt_runtime, os.path.join(model_path, 'gpu.buf'))
+            self.__trt_engine = engine.load_engine(self.__trt_runtime, os.path.join(model_path, 'gpu.trt'))
         except Exception as e:
             self.__finalize()
             raise e
