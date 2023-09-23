@@ -1,4 +1,4 @@
-FROM nvcr.io/nvidia/l4t-base:r32.4.4 AS base
+FROM nvcr.io/nvidia/l4t-base:r32.7.1 AS base
 
 # Install basic packages
 RUN apt-get update && apt-get install -y --no-install-recommends \
@@ -42,7 +42,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
         paho-mqtt \
         pycuda \
         six \
-        https://github.com/google-coral/pycoral/releases/download/release-frogfish/tflite_runtime-2.5.0-cp36-cp36m-linux_aarch64.whl
+        https://github.com/google-coral/pycoral/releases/download/v2.0.0/tflite_runtime-2.5.0.post1-cp36-cp36m-linux_aarch64.whl
 
 #
 # Copy libraries to the final image
@@ -91,3 +91,4 @@ RUN mkdir model \
 EXPOSE 8080
 
 ENV TRT_FLOAT_PRECISION=16
+ENV CUDA_MODULE_LOADING=LAZY

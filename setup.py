@@ -9,7 +9,7 @@ try:
 except FileNotFoundError:
     result = None
 version = result.stdout.splitlines()[0] \
-    if result is not None and result.returncode == 0 and len(result.stdout) > 0 else 'dev'
+    if result is not None and result.returncode == 0 and len(result.stdout) > 0 else '0.0.0'
 
 setup(
     name="watsor",

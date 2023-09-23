@@ -15,7 +15,7 @@ Watsor detects objects in video stream using deep learning-based approach. Inten
     + [Detection classes and filters](#detection-classes-and-filters)
     + [Zones and masks](#zones-and-masks)
     + [Tips](#tips)
-    + [Environmental variables](#environmental-variables)
+    + [Environment variables](#environment-variables)
     + [Secrets](#secrets)
     + [HomeAssistant integration](#homeassistant-integration)
   * [Running Watsor](#running-watsor)
@@ -242,9 +242,9 @@ python3 -m watsor.zones -m config/porch.png
     
     First the rate is lowered even more down to 10 FPS in order to guarantee constant feed for FFmpeg encoder (`-r 10`). The frames exceeding 10 FPS are dropped (`-vsync drop`) in order to match the target rate. Then output speed is set to be standard `30000/1001` (~30 FPS) and constant (`-vsync cfr`) to produce fluent video stream, duplicating frames as necessary to achieve the targeted output frame rate.
 
-### Environmental variables
+### Environment variables
  
-You can include values from your system’s environment variables either like [Home Assistant Core does](https://www.home-assistant.io/docs/configuration/yaml/#environmental-variables):
+You can include values from your system’s environment variables either like [Home Assistant Core does](https://www.home-assistant.io/docs/configuration/yaml/#environment-variables):
  
  `password: !env_var PASSWORD default_password` or 
  
@@ -462,10 +462,10 @@ If you've got the Coral install the [Edge TPU runtime](https://coral.ai/docs/acc
 
 Have [Nvidia CUDA GPU](https://developer.nvidia.com/cuda-gpus) on board - install the following components (now the hard part, you'd better consider [Docker](#docker):
 - [NVIDIA® GPU drivers](https://www.nvidia.com/drivers) for your graphic card
-- [CUDA® 11.1.1](https://docs.nvidia.com/cuda/archive/11.1.1/#installation-guides)
-- [cuDNN 8.0.5](https://docs.nvidia.com/deeplearning/cudnn/archives/cudnn-805/install-guide/index.html)
-- [TensorRT 7.2.2](https://docs.nvidia.com/deeplearning/tensorrt/archives/tensorrt-722/install-guide/index.html)
-- [PyCUDA 2020.1](https://docs.nvidia.com/deeplearning/tensorrt/archives/tensorrt-722/install-guide/index.html#installing-pycuda)
+- [CUDA® 11.8.0](https://docs.nvidia.com/cuda/archive/11.8.0/#installation-guides)
+- [cuDNN 8.9.0](https://docs.nvidia.com/deeplearning/cudnn/archives/cudnn-890/install-guide/index.html)
+- [TensorRT 8.5.3](https://docs.nvidia.com/deeplearning/tensorrt/archives/tensorrt-853/install-guide/index.html)
+- [PyCUDA 2022.2.2](https://docs.nvidia.com/deeplearning/tensorrt/archives/tensorrt-853/install-guide/index.html#installing-pycuda)
 
 ## Building from source
 
