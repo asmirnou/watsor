@@ -437,8 +437,8 @@ Watsor uses convolutional neural network trained to recognize 90 classes of obje
 
 The models are available in several formats depending on the device the inference is being performed on.
  - If you've got [The Coral USB Accelerator](https://coral.ai/products/accelerator/) download one of the models built for Edge TPU (MobileNet v1/v2), rename the file and put in `model/` folder as `edgetpu.tflite`. 
- - Have [Nvidia CUDA GPU](https://developer.nvidia.com/cuda-gpus) on board - download one of the models, rename the file and put in `model/` folder as `gpu.uff`.
- - CPU is used only when there are no accelerators or their models provided. Inside of TensorFlow archive you will find several files, you only need `frozen_inference_graph.pb` renamed as `cpu.pb` and placed in the `model/` folder. New models do not have frozen graph, but there is a `saved_model` folder that needs to be copied in full to the `model/` folder of Watsor. 
+ - Have [Nvidia CUDA GPU](https://developer.nvidia.com/cuda-gpus) on board - download one of the models, rename the file and put in `model/` folder as `gpu.uff`. Watsor also works with TF2 models in ONNX format, these you need to convert yourself using [the following guide](https://github.com/NVIDIA/TensorRT/tree/8.5.3/samples/python/tensorflow_object_detection_api#create-onnx-graph), then save as `model/gpu.onnx`.
+ - CPU is used only when there are no accelerators or their models provided. Inside of TensorFlow archive you will find several files, you only need `frozen_inference_graph.pb` renamed as `cpu.pb` and placed in the `model/` folder. TF2 models do not have frozen graph, but there is a `saved_model` folder that needs to be copied in full to the `model/` folder of Watsor. 
  
     <sub>Please note that _saved model_ takes longer to start. If TensorFlow is configured properly, GPU will be involved.</sub>
  - For single board computer such as Raspberry Pi or [Jetson Nano](https://github.com/asmirnou/watsor/wiki/Deploying-Watsor-to-Jetson-Nano) lightweight model is more efficient. Download and unpack if needed, rename the file and put in `model/` folder as `cpu.tflite`.
