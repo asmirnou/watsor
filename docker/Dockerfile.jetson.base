@@ -1,4 +1,4 @@
-FROM nvcr.io/nvidia/l4t-base:r32.4.4 AS base
+FROM nvcr.io/nvidia/l4t-tensorrt:r8.5.2-runtime AS base
 
 # Install basic packages
 RUN apt-get update && apt-get install -y --no-install-recommends \
@@ -6,7 +6,6 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     wget \
     unzip \
     gnupg2 \
-    libgeos-c1v5 libgeos-3.6.2 \
     python3-pip \
     && python3 -m pip install --upgrade \
         pip \
@@ -15,9 +14,9 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && rm -rf /var/lib/apt/lists/*
 
 #
-# Use the previous stage as a new temporary stage for building libraries
+# Use another image with CUDA headers as a new temporary stage for building libraries
 #
-FROM base AS builder
+FROM nvcr.io/nvidia/l4t-tensorrt:r8.5.2.2-devel AS builder
 
 LABEL watsor.builder="watsor.jetson.base.builder"
 
@@ -27,12 +26,17 @@ ENV LIBRARY_PATH=$LIBRARY_PATH:/usr/local/cuda/targets/aarch64-linux/lib
 
 # Build Wheel archives for the requirements and dependencies
 RUN apt-get update && apt-get install -y --no-install-recommends \
+    ca-certificates \
     build-essential \
+    python3-pip \
     python3-dev \
-    libgeos-dev \
+    && python3 -m pip install --upgrade \
+        pip \
+        setuptools \
+        wheel \
     && rm -rf /var/lib/apt/lists/* \
     && python3 -m pip wheel --wheel-dir=/tmp/install \
-        numpy==1.19.4 \
+        numpy \
         scipy \
         opencv-python-headless \
         PyYaml \
@@ -42,7 +46,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
         paho-mqtt \
         pycuda \
         six \
-        https://github.com/google-coral/pycoral/releases/download/release-frogfish/tflite_runtime-2.5.0-cp36-cp36m-linux_aarch64.whl
+        https://github.com/google-coral/pycoral/releases/download/v2.0.0/tflite_runtime-2.5.0.post1-cp38-cp38-linux_aarch64.whl
 
 #
 # Copy libraries to the final image
@@ -91,3 +95,4 @@ RUN mkdir model \
 EXPOSE 8080
 
 ENV TRT_FLOAT_PRECISION=16
+ENV CUDA_MODULE_LOADING=LAZY

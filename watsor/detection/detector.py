@@ -41,7 +41,7 @@ def create_object_detectors(delegate_class, stop_event, log_queue, frame_queue, 
         for device, clazz in edge_tpus():
             append_detector(clazz, device)
 
-    if path.isfile(path.join(model_path, 'gpu.buf')):
+    if path.isfile(path.join(model_path, 'gpu.trt')):
         for device, clazz in cuda_gpus():
             append_detector(clazz, device)
 

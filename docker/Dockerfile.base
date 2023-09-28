@@ -1,4 +1,4 @@
-FROM ubuntu:18.04 AS base
+FROM ubuntu:20.04 AS base
 
 ENV DEBIAN_FRONTEND=noninteractive
 ENV TF_CPP_MIN_LOG_LEVEL=2
@@ -30,14 +30,14 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && python3 -m pip wheel --wheel-dir=/tmp/install \
         PyYaml \
         cerberus \
-        numpy \
+        numpy==1.23.* \
         scipy \
         opencv-python-headless \
         shapely \
         werkzeug \
         paho-mqtt \
         tensorflow \
-        https://github.com/google-coral/pycoral/releases/download/release-frogfish/tflite_runtime-2.5.0-cp36-cp36m-linux_x86_64.whl
+        https://github.com/google-coral/pycoral/releases/download/v2.0.0/tflite_runtime-2.5.0.post1-cp38-cp38-linux_x86_64.whl
 
 #
 # Copy libraries to the final image
