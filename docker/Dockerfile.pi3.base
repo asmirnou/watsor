@@ -1,8 +1,4 @@
-# The device types Debian Balena base images have the Raspbian package source added
-# and Raspbian userland pre-installed
-FROM balenalib/raspberrypi3-debian-python:3.7-buster AS base
-
-RUN [ "cross-build-start" ]
+FROM balenalib/raspberrypi3:bullseye AS base
 
 ENV DEBIAN_FRONTEND=noninteractive
 ENV TF_CPP_MIN_LOG_LEVEL=2
@@ -13,48 +9,27 @@ RUN install_packages \
     wget \
     unzip \
     gnupg2 \
-    libatlas3-base libilmbase23 libopenexr23 \
-    libgeos-c1v5 libgeos-3.7.1 \
-    && pip install --upgrade \
+    python3-pip \
+    libatlas3-base \
+    libopenblas-base \
+    libgeos-c1v5 \
+    && python3 -m pip install --upgrade \
         pip \
         setuptools \
         wheel
 
-#
-# Use the previous stage as a new temporary stage for building libraries
-#
-FROM base AS builder-wheels
-
-LABEL watsor.builder="watsor.pi3.base.builder"
-
-# Build Wheel archives for the requirements and dependencies
-RUN install_packages \
-    build-essential \
-    python3-dev \
-    libgeos-dev \
-    && pip wheel --wheel-dir=/tmp/install \
+# Install dependencies
+RUN python3 -m pip install \
         PyYaml \
         cerberus \
         werkzeug \
         paho-mqtt \
         Shapely \
-    && pip wheel --wheel-dir=/tmp/install --extra-index-url https://www.piwheels.org/simple \
+    && pip install --extra-index-url https://www.piwheels.org/simple \
         numpy \
         scipy \
-        opencv-python-headless \
-        https://github.com/google-coral/pycoral/releases/download/release-frogfish/tflite_runtime-2.5.0-cp37-cp37m-linux_armv7l.whl
-
-#
-# Copy libraries to the final image
-#
-FROM base AS result
-
-COPY --from=builder-wheels /tmp/install /tmp/install
-
-# Install Wheel archives built at previous stage
-RUN install_packages python3-numpy \
-    && pip install --upgrade /tmp/install/* \
-    && rm -r /tmp/install
+        opencv-python-headless==4.6.* \
+        https://github.com/google-coral/pycoral/releases/download/v2.0.0/tflite_runtime-2.5.0.post1-cp39-cp39-linux_armv7l.whl
 
 # Install FFmpeg
 RUN install_packages \
@@ -91,5 +66,3 @@ RUN mkdir model && \
     chown -R watsor:watsor /usr/share/watsor/model
 
 EXPOSE 8080
-
-RUN [ "cross-build-end" ]
