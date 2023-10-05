@@ -33,16 +33,16 @@ package:
 	python setup.py sdist --dist-dir=build/dist bdist_wheel --dist-dir=build/dist
 
 image:
-	docker build        --tag watsor.base            --file docker/Dockerfile.base        .
-	docker build        --tag watsor.gpu.base        --file docker/Dockerfile.gpu.base    .
-	docker buildx build --tag watsor.jetson.base     --file docker/Dockerfile.jetson.base . --platform linux/arm64
-	docker build        --tag watsor.pi3.base        --file docker/Dockerfile.pi3.base    .
-	docker build        --tag watsor.pi4.base        --file docker/Dockerfile.pi4.base    .
-	docker build        $(call release_tags,)        --file docker/Dockerfile             .
-	docker build        $(call release_tags,.gpu)    --file docker/Dockerfile.gpu         .
-	docker buildx build $(call release_tags,.jetson) --file docker/Dockerfile.jetson      . --platform linux/arm64
-	docker build        $(call release_tags,.pi3)    --file docker/Dockerfile.pi3         .
-	docker build        $(call release_tags,.pi4)    --file docker/Dockerfile.pi4         .
+	docker build --tag watsor.base            --file docker/Dockerfile.base        . --platform linux/amd64
+	docker build --tag watsor.gpu.base        --file docker/Dockerfile.gpu.base    . --platform linux/amd64
+	docker build --tag watsor.jetson.base     --file docker/Dockerfile.jetson.base . --platform linux/arm64
+	docker build --tag watsor.pi4.base        --file docker/Dockerfile.pi4.base    . --platform linux/arm64
+	docker build --tag watsor.pi3.base        --file docker/Dockerfile.pi3.base    . --platform linux/arm
+	docker build $(call release_tags,)        --file docker/Dockerfile             . --platform linux/amd64
+	docker build $(call release_tags,.gpu)    --file docker/Dockerfile.gpu         . --platform linux/amd64
+	docker build $(call release_tags,.jetson) --file docker/Dockerfile.jetson      . --platform linux/arm64
+	docker build $(call release_tags,.pi4)    --file docker/Dockerfile.pi4         . --platform linux/arm64
+	docker build $(call release_tags,.pi3)    --file docker/Dockerfile.pi3         . --platform linux/arm
 	docker/tag-builders.sh
 
 all: test package

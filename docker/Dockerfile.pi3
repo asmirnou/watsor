@@ -1,15 +1,11 @@
 FROM watsor.pi3.base
 
-RUN [ "cross-build-start" ]
-
 COPY . /opt/watsor
 
 WORKDIR /opt/watsor
 
 RUN python3 -m pip install -r requirements.txt --no-deps && \
     rm -r /opt/watsor
-
-RUN [ "cross-build-end" ]
 
 WORKDIR /
 
