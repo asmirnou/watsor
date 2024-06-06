@@ -2,11 +2,14 @@ import subprocess as sp
 import threading
 import logging
 import io
+import re
 import signal
 from time import time
+from collections import defaultdict
 from watsor.stream.read import Read, ReadPublish, ReadDetectPublish
 from watsor.stream.work import Work, Payload
 from watsor.stream.share import Frame, FrameBuffer, FramesPerSecond, RateLimiter
+from watsor.stream.sync import CountDownLatch
 
 try:
     SIGSTOP = signal.SIGSTOP
@@ -22,8 +25,8 @@ class FFmpegDecoder(ReadDetectPublish):
     to perform their work for when detection and filtering are complete.
     """
 
-    def __init__(self, name: str, stop_event, log_queue, frame_queue, frame_buffer, cmd_args, cwd=None, stdin=sp.DEVNULL,
-                 kwargs=None):
+    def __init__(self, name: str, stop_event, log_queue, frame_queue, frame_buffer, cmd_args, cwd=None,
+                 stdin=sp.DEVNULL, kwargs=None):
         self.__cmd_args = cmd_args
         self.__cwd = cwd
         self.__stdin = stdin
@@ -31,6 +34,8 @@ class FFmpegDecoder(ReadDetectPublish):
         self.__stderr_thread = None
         self.__fps = FramesPerSecond()
         self.__rate_limiter = RateLimiter()
+        self.__info_latch = CountDownLatch() if any('showinfo' in s for s in cmd_args) else None
+        self.__info_re = re.compile(r"(\w+):\s*((?:\[[^\]]+\])|(?:[^\s]+))", re.IGNORECASE)
         super().__init__(name, stop_event, log_queue, frame_queue, frame_buffer,
                          args=(self.__fps, self.__rate_limiter), kwargs={} if kwargs is None else kwargs)
 
@@ -44,7 +49,9 @@ class FFmpegDecoder(ReadDetectPublish):
             self.__subprocess.send_signal(signal.SIGSTOP)
 
         self.__stderr_thread = threading.Thread(name=self.name, target=_stderr_reader,
-                                                args=(self.__class__.__name__, self.__subprocess.stderr))
+                                                args=(self.__class__.__name__,
+                                                      self.__subprocess.stderr,
+                                                      self._parse_show_info))
         self.__stderr_thread.daemon = True
 
         super().initialize()
@@ -76,16 +83,27 @@ class FFmpegDecoder(ReadDetectPublish):
             self._logger.debug("Stdout closed")
 
     def _new_frame(self, frame: Frame, frame_queue, frame_buffer, fps, rate_limiter, *args, **kwargs):
+        if self.__info_latch is not None:
+            self.__info_latch.reset(1)
+
         frame.clear()
         image = self.__subprocess.stdout.readinto(frame.image.get_obj())
         if not image:
             raise EOFError
         frame.header.epoch = time()
 
-        result = rate_limiter.allow()
-        if result:
-            fps(value=True)
-        return result
+        if not rate_limiter.allow():
+            return False
+
+        fps(value=True)
+
+        if self.__info_latch is not None and self.__info_latch.wait(1):
+            frame.header.info.has = True
+            frame.header.info.num = int(self.__info['n'])
+            frame.header.info.pts = int(self.__info['pts'])
+            frame.header.info.pts_time = float(self.__info['pts_time'])
+
+        return True
 
     def start(self):
         super().start()
@@ -109,13 +127,31 @@ class FFmpegDecoder(ReadDetectPublish):
         finally:
             self.__subprocess.stderr.close()
 
+    def _parse_show_info(self, logger, line):
+        if line.startswith("[Parsed_showinfo_"):
+            logger.debug(line)
+        else:
+            logger.info(line)
+            return
+
+        if self.__info_latch is None or self.__info_latch.wait(0):
+            return
+
+        self.__info = defaultdict(list)
+        for m in self.__info_re.finditer(line):
+            self.__info[m.group(1)] = m.group(2)
+
+        if 'n' in self.__info:
+            self.__info_latch.count_down()
+
 
 class FFmpegEncoder(Work):
     """Controls FFmpeg subprocess feeding it with raw 24-bit frames to encode them
      in compressed video stream. Exposes FFmpeg subprocess stdout for further re-streaming.
     """
 
-    def __init__(self, name: str, stop_event, log_queue, frame_queue, frame_buffer, cmd_args, cwd=None, stdout=sp.DEVNULL,
+    def __init__(self, name: str, stop_event, log_queue, frame_queue, frame_buffer, cmd_args, cwd=None,
+                 stdout=sp.DEVNULL,
                  args=(), kwargs=None):
         self.__cmd_args = cmd_args
         self.__cwd = cwd
@@ -138,7 +174,9 @@ class FFmpegEncoder(Work):
             self.__subprocess.send_signal(signal.SIGSTOP)
 
         self.__stderr_thread = threading.Thread(name=self.name, target=_stderr_reader,
-                                                args=(self.__class__.__name__, self.__subprocess.stderr))
+                                                args=(self.__class__.__name__,
+                                                      self.__subprocess.stderr,
+                                                      _default_printer))
         self.__stderr_thread.daemon = False
 
         super().initialize()
@@ -208,20 +246,24 @@ class FFmpegEncoder(Work):
             self.__subprocess.stderr.close()
 
 
-def _stderr_reader(log_name, stream):
+def _stderr_reader(log_name, stream, consumer):
     wrapper = io.TextIOWrapper(stream)
     logger = logging.getLogger(log_name)
     logger.debug("Stderr redirected to stdout")
     try:
         line = wrapper.readline()
         while line:
-            logger.info(line.rstrip())
+            consumer(logger, line.rstrip())
             line = wrapper.readline()
     except Exception as e:
         logger.exception(e)
     finally:
         wrapper.close()
     logger.debug("Stderr gracefully closed")
+
+
+def _default_printer(logger, line):
+    logger.info(line)
 
 
 class MpegTSReader(ReadPublish):

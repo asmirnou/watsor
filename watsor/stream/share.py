@@ -1,6 +1,6 @@
 from multiprocessing import RLock
 from multiprocessing.sharedctypes import Value, Array
-from ctypes import Structure, c_int, c_bool, c_double, memmove, memset, addressof, sizeof
+from ctypes import Structure, c_int, c_long, c_bool, c_double, memmove, memset, addressof, sizeof
 from collections import deque, defaultdict
 from logging import getLogger
 from time import time
@@ -13,6 +13,13 @@ class BoundingBox(Structure):
                 ('y_min', c_int),
                 ('x_max', c_int),
                 ('y_max', c_int)]
+
+
+class Info(Structure):
+    _fields_ = [('has', c_bool),
+                ('num', c_long),
+                ('pts', c_long),
+                ('pts_time', c_double)]
 
 
 # noinspection PyTypeChecker
@@ -29,6 +36,7 @@ class Header(Structure):
                 ('height', c_int),
                 ('channels', c_int),
                 ('epoch', c_double),
+                ("info", Info),
                 ("detections", Detection * 100)]
 
 
