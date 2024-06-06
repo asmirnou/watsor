@@ -81,7 +81,7 @@ class TensorFlowObjectDetector:
         max_height = image_shape[0] - 1
         while d < len(scores) and d < len(detections):
             detection = detections[d]
-            detection.label = label_codes[d]
+            detection.label = int(label_codes[d])
             detection.confidence = scores[d]
             detection.bounding_box.y_min = int(boxes[d][0] * max_height)
             detection.bounding_box.x_min = int(boxes[d][1] * max_width)

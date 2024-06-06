@@ -26,14 +26,6 @@ class NamedClient(mqtt.Client):
         current_thread().name = self._client_id.decode('utf-8')
         super()._thread_main()
 
-    @property
-    def host(self):
-        return self._host
-
-    @property
-    def port(self):
-        return self._port
-
 
 # noinspection PyUnusedLocal
 class MQTT(WorkPublish):
@@ -200,7 +192,7 @@ class MQTT(WorkPublish):
 
             self._publish_states_on(client, user_data, groups)
             self._publish_states_off(client, user_data, groups)
-            self._publish_detections(client, user_data, groups, frame.header.epoch)
+            self._publish_detections(client, user_data, groups, frame.header.epoch, frame.header.info)
             self._publish_sensor_info(client, user_data, frame_buffer, fps(value=True), decoder_fps())
             self._publish_state(client, user_data)
         finally:
@@ -258,7 +250,7 @@ class MQTT(WorkPublish):
                     client.publish(topic="{}/detection/{}/state".format(user_data.topic, label), payload='OFF', qos=1,
                                    retain=False)
 
-    def _publish_detections(self, client, user_data, groups, epoch):
+    def _publish_detections(self, client, user_data, groups, epoch, info):
         """Publish detection details.
         """
         with self.__command_lock:
@@ -266,7 +258,14 @@ class MQTT(WorkPublish):
                 return
 
         for label, detections in groups.items():
-            details = {'t': datetime.fromtimestamp(epoch).isoformat(), 'd': detections}
+            details = defaultdict()
+            details['t'] = datetime.fromtimestamp(epoch).isoformat()
+            if info.has:
+                details['n'] = info.num
+                details['pts'] = info.pts
+                details['pts_time'] = info.pts_time
+            details['d'] = detections
+
             client.publish(topic="{}/detection/{}/details".format(user_data.topic, label),
                            payload=json.dumps(details))
 
