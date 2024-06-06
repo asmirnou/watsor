@@ -26,14 +26,6 @@ class NamedClient(mqtt.Client):
         current_thread().name = self._client_id.decode('utf-8')
         super()._thread_main()
 
-    @property
-    def host(self):
-        return self._host
-
-    @property
-    def port(self):
-        return self._port
-
 
 # noinspection PyUnusedLocal
 class MQTT(WorkPublish):
